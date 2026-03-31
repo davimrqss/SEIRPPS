@@ -1,0 +1,73 @@
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  FileText,
+  CreditCard,
+  Users,
+  FileDown,
+  Settings,
+  Shield,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/folhas", icon: FileText, label: "Folhas de Pagamento" },
+  { to: "/lancamentos", icon: CreditCard, label: "Lançar Pagamento" },
+  { to: "/guias", icon: FileDown, label: "Guias PDF" },
+  { to: "/cadastro", icon: Users, label: "Cadastro" },
+];
+
+export function AppSidebar() {
+  const location = useLocation();
+
+  return (
+    <aside className="w-64 min-h-screen bg-sidebar text-sidebar-foreground flex flex-col">
+      <div className="p-6 border-b border-sidebar-border">
+        <div className="flex items-center gap-3">
+          <Shield className="h-8 w-8 text-sidebar-primary" />
+          <div>
+            <h1 className="text-lg font-bold text-sidebar-primary-foreground">
+              PrevSys
+            </h1>
+            <p className="text-xs text-sidebar-muted">Caixa de Previdência</p>
+          </div>
+        </div>
+      </div>
+
+      <nav className="flex-1 p-4 space-y-1">
+        {navItems.map((item) => {
+          const isActive =
+            item.to === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(item.to);
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              {item.label}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="p-4 border-t border-sidebar-border">
+        <NavLink
+          to="/configuracoes"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
+        >
+          <Settings className="h-5 w-5" />
+          Configurações
+        </NavLink>
+      </div>
+    </aside>
+  );
+}
