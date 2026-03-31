@@ -6,9 +6,12 @@ import {
   Users,
   FileDown,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import logo from "@/assets/logo.jpeg";
 
 const navItems = [
@@ -17,6 +20,7 @@ const navItems = [
   { to: "/lancamentos", icon: CreditCard, label: "Lançar Pagamento" },
   { to: "/guias", icon: FileDown, label: "Guias PDF" },
   { to: "/cadastro", icon: Users, label: "Cadastro" },
+  { to: "/configuracoes", icon: Settings, label: "Configurações" },
 ];
 
 export function AppSidebar() {
