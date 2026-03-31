@@ -25,7 +25,28 @@ const navItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, user, signOut } = useAuth();
+
+  const { data: caixa } = useQuery({
+    queryKey: ["minha-caixa"],
+    queryFn: async () => {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("caixa_id")
+        .eq("user_id", user!.id)
+        .single();
+      if (!prof?.caixa_id) return null;
+      const { data } = await supabase
+        .from("caixas_previdencia")
+        .select("nome")
+        .eq("id", prof.caixa_id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const systemName = caixa?.nome || "PrevSys";
 
   return (
     <aside className="w-64 min-h-screen bg-sidebar text-sidebar-foreground flex flex-col">
@@ -33,8 +54,8 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <img src={logo} alt="Logo" className="h-10 w-10 object-contain rounded" />
           <div>
-            <h1 className="text-lg font-bold text-sidebar-primary-foreground">
-              PrevSys
+            <h1 className="text-lg font-bold text-sidebar-primary-foreground leading-tight">
+              {systemName}
             </h1>
             <p className="text-xs text-sidebar-muted">Caixa de Previdência</p>
           </div>
