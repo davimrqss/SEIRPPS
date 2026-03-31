@@ -82,9 +82,10 @@ export default function Configuracoes() {
         if (profileError) throw profileError;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["minha-caixa"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      await refreshProfile();
       toast.success(caixa ? "Caixa atualizada com sucesso!" : "Caixa cadastrada com sucesso!");
     },
     onError: (err: any) => {
