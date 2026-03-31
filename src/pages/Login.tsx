@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield } from "lucide-react";
+import logo from "@/assets/logo.jpeg";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,8 +43,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto p-3 bg-primary/10 rounded-xl w-fit">
-            <Shield className="h-10 w-10 text-primary" />
+          <div className="mx-auto w-20 h-20">
+            <img src={logo} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="text-2xl">PrevSys</CardTitle>
           <p className="text-sm text-muted-foreground">

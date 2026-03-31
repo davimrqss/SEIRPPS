@@ -6,10 +6,10 @@ import {
   Users,
   FileDown,
   LogOut,
-  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import logo from "@/assets/logo.jpeg";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -27,7 +27,7 @@ export function AppSidebar() {
     <aside className="w-64 min-h-screen bg-sidebar text-sidebar-foreground flex flex-col">
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-sidebar-primary" />
+          <img src={logo} alt="Logo" className="h-10 w-10 object-contain rounded" />
           <div>
             <h1 className="text-lg font-bold text-sidebar-primary-foreground">
               PrevSys
