@@ -13,6 +13,7 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
