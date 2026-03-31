@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Building2, Save } from "lucide-react";
 
 export default function Configuracoes() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
   const isAdmin = hasRole("admin");
 
@@ -82,9 +82,10 @@ export default function Configuracoes() {
         if (profileError) throw profileError;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["minha-caixa"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      await refreshProfile();
       toast.success(caixa ? "Caixa atualizada com sucesso!" : "Caixa cadastrada com sucesso!");
     },
     onError: (err: any) => {
