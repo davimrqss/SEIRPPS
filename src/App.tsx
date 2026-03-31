@@ -11,6 +11,7 @@ import FolhasPagamento from "./pages/FolhasPagamento";
 import LancarPagamento from "./pages/LancarPagamento";
 import GuiasPDF from "./pages/GuiasPDF";
 import Cadastro from "./pages/Cadastro";
+import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/lancamentos" element={<LancarPagamento />} />
               <Route path="/guias" element={<GuiasPDF />} />
               <Route path="/cadastro" element={<Cadastro />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
