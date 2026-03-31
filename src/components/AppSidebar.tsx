@@ -5,10 +5,11 @@ import {
   CreditCard,
   Users,
   FileDown,
-  Settings,
+  LogOut,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -20,6 +21,7 @@ const navItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
 
   return (
     <aside className="w-64 min-h-screen bg-sidebar text-sidebar-foreground flex flex-col">
@@ -59,14 +61,19 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
-        <NavLink
-          to="/configuracoes"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
+      <div className="p-4 border-t border-sidebar-border space-y-2">
+        {profile && (
+          <p className="text-xs text-sidebar-muted px-3 truncate">
+            {profile.nome}
+          </p>
+        )}
+        <button
+          onClick={signOut}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 w-full"
         >
-          <Settings className="h-5 w-5" />
-          Configurações
-        </NavLink>
+          <LogOut className="h-5 w-5" />
+          Sair
+        </button>
       </div>
     </aside>
   );
