@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Building2, Save } from "lucide-react";
 
 export default function Configuracoes() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
   const isAdmin = hasRole("admin");
 
