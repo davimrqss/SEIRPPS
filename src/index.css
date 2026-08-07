@@ -54,7 +54,54 @@ All colors MUST be HSL.
     --sidebar-ring: 205 80% 58%;
     --sidebar-muted: 162 30% 50%;
   }
+
+  .dark {
+    --background: 200 28% 10%;
+    --foreground: 160 15% 92%;
+
+    --card: 200 25% 13%;
+    --card-foreground: 160 15% 92%;
+
+    --popover: 200 25% 13%;
+    --popover-foreground: 160 15% 92%;
+
+    --primary: 162 55% 46%;
+    --primary-foreground: 200 30% 8%;
+
+    --secondary: 200 22% 18%;
+    --secondary-foreground: 160 15% 92%;
+
+    --muted: 200 20% 18%;
+    --muted-foreground: 195 12% 65%;
+
+    --accent: 205 75% 58%;
+    --accent-foreground: 200 30% 8%;
+
+    --destructive: 0 65% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 162 55% 46%;
+    --success-foreground: 200 30% 8%;
+
+    --warning: 38 88% 58%;
+    --warning-foreground: 200 30% 8%;
+
+    --border: 200 18% 22%;
+    --input: 200 18% 22%;
+    --ring: 162 55% 46%;
+
+    --sidebar-background: 200 30% 8%;
+    --sidebar-foreground: 160 12% 88%;
+    --sidebar-primary: 205 75% 62%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 22% 16%;
+    --sidebar-accent-foreground: 160 15% 95%;
+    --sidebar-border: 200 18% 20%;
+    --sidebar-ring: 205 75% 58%;
+    --sidebar-muted: 195 12% 55%;
+  }
 }
+
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
