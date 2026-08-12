@@ -1,0 +1,312 @@
+import { useState } from "react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Folha = Tables<"folhas_pagamento">;
+
+const fmt = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const formatMes = (mes: string) =>
+  new Date(mes + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+export function FolhaActions({ folha }: { folha: Folha }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [viewOpen, setViewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [form, setForm] = useState({
+    centro_custo: folha.centro_custo,
+    orgao: folha.orgao,
+    mes_referencia: folha.mes_referencia,
+    remuneracao: String(folha.remuneracao),
+    base_calculo: String(folha.base_calculo),
+    aliquota_servidor: String(folha.aliquota_servidor),
+    aliquota_patronal: String(folha.aliquota_patronal),
+    is_13: folha.is_13,
+    tipo: folha.tipo,
+    paga: folha.paga,
+  });
+
+  const openEdit = () => {
+    setForm({
+      centro_custo: folha.centro_custo,
+      orgao: folha.orgao,
+      mes_referencia: folha.mes_referencia,
+      remuneracao: String(folha.remuneracao),
+      base_calculo: String(folha.base_calculo),
+      aliquota_servidor: String(folha.aliquota_servidor),
+      aliquota_patronal: String(folha.aliquota_patronal),
+      is_13: folha.is_13,
+      tipo: folha.tipo,
+      paga: folha.paga,
+    });
+    setEditOpen(true);
+  };
+
+  const change = (field: string, value: string | boolean) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["folhas"] });
+    queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] });
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const base = parseFloat(form.base_calculo) || 0;
+    const aliqServ = parseFloat(form.aliquota_servidor) || 0;
+    const aliqPat = parseFloat(form.aliquota_patronal) || 0;
+
+    const { error } = await supabase
+      .from("folhas_pagamento")
+      .update({
+        centro_custo: form.centro_custo,
+        orgao: form.orgao,
+        mes_referencia: form.mes_referencia,
+        vencimento: form.mes_referencia + "-20",
+        remuneracao: parseFloat(form.remuneracao) || 0,
+        base_calculo: base,
+        valor_servidor: base * (aliqServ / 100),
+        valor_patronal: base * (aliqPat / 100),
+        aliquota_servidor: aliqServ,
+        aliquota_patronal: aliqPat,
+        is_13: form.is_13,
+        tipo: form.tipo,
+        paga: form.paga,
+      })
+      .eq("id", folha.id);
+
+    setLoading(false);
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+      return;
+    }
+    invalidate();
+    setEditOpen(false);
+    toast({ title: "Folha atualizada com sucesso!" });
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    const { error: pagError } = await supabase.from("pagamentos").delete().eq("folha_id", folha.id);
+    if (pagError) {
+      setLoading(false);
+      toast({ title: "Erro ao excluir", description: pagError.message, variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("folhas_pagamento").delete().eq("id", folha.id);
+    setLoading(false);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+      return;
+    }
+    invalidate();
+    setDeleteOpen(false);
+    toast({ title: "Folha excluída", description: `${folha.centro_custo} - ${folha.mes_referencia}` });
+  };
+
+  const base = parseFloat(form.base_calculo) || 0;
+  const previewServ = base * ((parseFloat(form.aliquota_servidor) || 0) / 100);
+  const previewPat = base * ((parseFloat(form.aliquota_patronal) || 0) / 100);
+
+  return (
+    <>
+      <div className="flex items-center justify-center gap-1">
+        <Button variant="ghost" size="icon" aria-label="Visualizar folha" onClick={() => setViewOpen(true)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" aria-label="Editar folha" onClick={openEdit}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Excluir folha"
+          className="text-destructive hover:text-destructive"
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Visualizar */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Folha</DialogTitle>
+            <DialogDescription>{folha.centro_custo} — {formatMes(folha.mes_referencia)}</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <Info label="Centro de Custo" value={folha.centro_custo} />
+            <Info label="Órgão" value={folha.orgao} />
+            <Info label="Mês de Referência" value={formatMes(folha.mes_referencia)} />
+            <Info label="Vencimento" value={new Date(folha.vencimento + "T00:00:00").toLocaleDateString("pt-BR")} />
+            <Info label="Tipo" value={folha.tipo} />
+            <Info label="13° Salário" value={folha.is_13 ? "Sim" : "Não"} />
+            <Info label="Remuneração" value={fmt(Number(folha.remuneracao))} />
+            <Info label="Base de Cálculo" value={fmt(Number(folha.base_calculo))} />
+            <Info label={`Servidor (${folha.aliquota_servidor}%)`} value={fmt(Number(folha.valor_servidor))} />
+            <Info label={`Patronal (${folha.aliquota_patronal}%)`} value={fmt(Number(folha.valor_patronal))} />
+            <div>
+              <p className="text-muted-foreground">Status</p>
+              <Badge
+                className={
+                  folha.paga
+                    ? "bg-success/10 text-success hover:bg-success/20"
+                    : "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                }
+              >
+                {folha.paga ? "Paga" : "Pendente"}
+              </Badge>
+            </div>
+            <Info
+              label="Total de Contribuições"
+              value={fmt(Number(folha.valor_servidor) + Number(folha.valor_patronal))}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewOpen(false)}>Fechar</Button>
+            <Button onClick={() => { setViewOpen(false); openEdit(); }}>
+              <Pencil className="h-4 w-4 mr-2" />Editar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Editar */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Folha</DialogTitle>
+            <DialogDescription>Atualize os dados da folha de pagamento</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-centro">Centro de Custo</Label>
+                <Input id="e-centro" value={form.centro_custo} onChange={(e) => change("centro_custo", e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-orgao">Órgão</Label>
+                <Input id="e-orgao" value={form.orgao} onChange={(e) => change("orgao", e.target.value)} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-mes">Mês de Referência</Label>
+                <Input id="e-mes" type="month" value={form.mes_referencia} onChange={(e) => change("mes_referencia", e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-tipo">Tipo de Folha</Label>
+                <Select value={form.tipo} onValueChange={(v) => change("tipo", v)}>
+                  <SelectTrigger id="e-tipo"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="servidor">Servidor</SelectItem>
+                    <SelectItem value="patronal">Patronal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end gap-3 pb-1">
+                <Switch id="e-is13" checked={form.is_13} onCheckedChange={(v) => change("is_13", v)} />
+                <Label htmlFor="e-is13">13° Salário</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-remun">Remuneração (R$)</Label>
+                <Input id="e-remun" type="number" step="0.01" value={form.remuneracao} onChange={(e) => change("remuneracao", e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-base">Base de Cálculo (R$)</Label>
+                <Input id="e-base" type="number" step="0.01" value={form.base_calculo} onChange={(e) => change("base_calculo", e.target.value)} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-aliqs">Alíquota Servidor (%)</Label>
+                <Input id="e-aliqs" type="number" step="0.01" value={form.aliquota_servidor} onChange={(e) => change("aliquota_servidor", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-aliqp">Alíquota Patronal (%)</Label>
+                <Input id="e-aliqp" type="number" step="0.01" value={form.aliquota_patronal} onChange={(e) => change("aliquota_patronal", e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+              <div>
+                <p className="text-sm text-muted-foreground">Contribuição Servidor</p>
+                <p className="text-lg font-bold text-foreground">{fmt(previewServ)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Contribuição Patronal</p>
+                <p className="text-lg font-bold text-foreground">{fmt(previewPat)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch id="e-paga" checked={form.paga} onCheckedChange={(v) => change("paga", v)} />
+              <Label htmlFor="e-paga">Folha paga</Label>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar alterações"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta folha?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A folha de <strong>{folha.centro_custo}</strong> ({formatMes(folha.mes_referencia)}) e os
+              pagamentos vinculados serão removidos permanentemente. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={loading}
+            >
+              {loading ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-muted-foreground">{label}</p>
+      <p className="font-medium text-foreground capitalize">{value}</p>
+    </div>
+  );
+}
