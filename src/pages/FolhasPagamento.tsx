@@ -121,6 +121,7 @@ export default function FolhasPagamento() {
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Servidor</th>
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Patronal</th>
                   <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-center py-3 px-4 font-medium text-muted-foreground">Ações</th>
                 </tr>
               </thead>
               <tbody>
