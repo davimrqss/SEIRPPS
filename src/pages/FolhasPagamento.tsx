@@ -9,6 +9,7 @@ import { FileText, Filter, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { FolhaActions } from "@/components/FolhaActions";
 
 export default function FolhasPagamento() {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export default function FolhasPagamento() {
               <tbody>
                 {folhasFiltradas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
                       <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       Nenhuma folha encontrada
                     </td>
@@ -155,6 +156,9 @@ export default function FolhasPagamento() {
                         <Badge className={folha.paga ? "bg-success/10 text-success hover:bg-success/20" : "bg-destructive/10 text-destructive hover:bg-destructive/20"}>
                           {folha.paga ? "Paga" : "Pendente"}
                         </Badge>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <FolhaActions folha={folha} />
                       </td>
                     </tr>
                   ))
