@@ -1,211 +1,174 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { CreditCard, Save } from "lucide-react";
+import { ArrowLeft, CreditCard, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router-dom";
+import { CurrencyInput } from "@/components/CurrencyInput";
+import { fmtBRL, isoToBR, parseCurrency } from "@/lib/format";
+
+const formatMes = (mes: string) =>
+  new Date(mes + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
 export default function LancarPagamento() {
   const { toast } = useToast();
-  const { profile } = useAuth();
-  const queryClient = useQueryClient();
+  const { folhaId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    centroCusto: "",
-    orgao: "",
-    mesReferencia: "",
-    remuneracao: "",
-    baseCalculo: "",
-    aliquotaServidor: "11",
-    aliquotaPatronal: "22",
-    is13: false,
-    tipo: "servidor",
-    valorPago: "",
-    valorRecebido: "",
-  });
+  const [tipo, setTipo] = useState("servidor");
+  const [valor, setValor] = useState("");
+  const [observacoes, setObservacoes] = useState("");
 
-  const handleChange = (field: string, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  const { data: folha, isLoading } = useQuery({
+    queryKey: ["folha", folhaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("folhas_pagamento")
+        .select("*")
+        .eq("id", folhaId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!folhaId,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.caixa_id) {
-      toast({ title: "Erro", description: "Você precisa estar vinculado a uma caixa de previdência.", variant: "destructive" });
+    if (!folha) return;
+    const valorNum = parseCurrency(valor);
+    if (valorNum <= 0) {
+      toast({ title: "Valor inválido", description: "Informe o valor do pagamento.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
-    const baseCalc = parseFloat(form.baseCalculo) || 0;
-    const aliqServ = parseFloat(form.aliquotaServidor) || 0;
-    const aliqPat = parseFloat(form.aliquotaPatronal) || 0;
-
-    const { data: folha, error } = await supabase.from("folhas_pagamento").insert({
-      centro_custo: form.centroCusto,
-      orgao: form.orgao,
-      mes_referencia: form.mesReferencia,
-      vencimento: form.mesReferencia + "-20",
-      remuneracao: parseFloat(form.remuneracao) || 0,
-      base_calculo: baseCalc,
-      valor_servidor: baseCalc * (aliqServ / 100),
-      valor_patronal: baseCalc * (aliqPat / 100),
-      aliquota_servidor: aliqServ,
-      aliquota_patronal: aliqPat,
-      is_13: form.is13,
-      tipo: form.tipo,
-      caixa_id: profile.caixa_id,
-    }).select().single();
+    const { error } = await supabase.from("pagamentos").insert({
+      folha_id: folha.id,
+      valor_pago: valorNum,
+      valor_recebido: valorNum,
+      observacoes: `${tipo === "servidor" ? "Contribuição servidor" : "Contribuição patronal"}${observacoes ? " — " + observacoes : ""}`,
+    });
 
     if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
       setLoading(false);
+      toast({ title: "Erro ao lançar pagamento", description: error.message, variant: "destructive" });
       return;
     }
 
-    // If payment values provided, create pagamento
-    const valorPago = parseFloat(form.valorPago) || 0;
-    const valorRecebido = parseFloat(form.valorRecebido) || 0;
-    if (valorPago > 0 || valorRecebido > 0) {
-      await supabase.from("pagamentos").insert({
-        folha_id: folha.id,
-        valor_pago: valorPago,
-        valor_recebido: valorRecebido,
-      });
-    }
+    await supabase.from("folhas_pagamento").update({ paga: true }).eq("id", folha.id);
 
-    queryClient.invalidateQueries({ queryKey: ["folhas"] });
-    queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] });
-    toast({ title: "Folha lançada com sucesso!", description: `${form.centroCusto} - ${form.mesReferencia}` });
     setLoading(false);
-    navigate("/folhas");
+    queryClient.invalidateQueries({ queryKey: ["folhas"] });
+    queryClient.invalidateQueries({ queryKey: ["folhas-guias"] });
+    queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] });
+    toast({ title: "Pagamento lançado!", description: `${folha.centro_custo} — ${fmtBRL(valorNum)}` });
+    navigate("/guias");
   };
 
-  const baseCalc = parseFloat(form.baseCalculo) || 0;
-  const aliqServ = parseFloat(form.aliquotaServidor) || 0;
-  const aliqPat = parseFloat(form.aliquotaPatronal) || 0;
-  const valorServidor = baseCalc * (aliqServ / 100);
-  const valorPatronal = baseCalc * (aliqPat / 100);
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-20 text-muted-foreground">Carregando...</div>;
+  }
 
-  const fmt = (v: number) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  if (!folha) {
+    return (
+      <div className="space-y-4">
+        <p className="text-muted-foreground">Folha não encontrada.</p>
+        <Button variant="outline" onClick={() => navigate("/guias")}>Voltar para Guias</Button>
+      </div>
+    );
+  }
+
+  const valorSugerido = tipo === "servidor" ? Number(folha.valor_servidor) : Number(folha.valor_patronal);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-3xl">
       <div>
+        <Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/guias")}>
+          <ArrowLeft className="h-4 w-4 mr-1" />Voltar para Guias
+        </Button>
         <h1 className="text-2xl font-bold text-foreground">Lançar Pagamento</h1>
-        <p className="text-muted-foreground mt-1">Registre uma nova folha de pagamento</p>
+        <p className="text-muted-foreground mt-1">
+          {folha.centro_custo} — {formatMes(folha.mes_referencia)}
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Dados da Folha</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="centroCusto">Centro de Custo</Label>
-                <Input id="centroCusto" placeholder="Ex: Secretaria de Educação" value={form.centroCusto} onChange={(e) => handleChange("centroCusto", e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="orgao">Órgão</Label>
-                <Input id="orgao" placeholder="Ex: Prefeitura Municipal" value={form.orgao} onChange={(e) => handleChange("orgao", e.target.value)} required />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="mesReferencia">Mês de Referência</Label>
-                <Input id="mesReferencia" type="month" value={form.mesReferencia} onChange={(e) => handleChange("mesReferencia", e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de Folha</Label>
-                <Select value={form.tipo} onValueChange={(v) => handleChange("tipo", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="servidor">Servidor</SelectItem>
-                    <SelectItem value="patronal">Patronal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end gap-3 pb-1">
-                <Switch id="is13" checked={form.is13} onCheckedChange={(v) => handleChange("is13", v)} />
-                <Label htmlFor="is13">13° Salário</Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Dados da Folha</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+          <Info label="Centro de Custo" value={folha.centro_custo} />
+          <Info label="Órgão" value={folha.orgao} />
+          <Info label="Mês de Referência" value={formatMes(folha.mes_referencia)} />
+          <Info label="Vencimento" value={isoToBR(folha.vencimento)} />
+          <Info label="Remuneração" value={fmtBRL(Number(folha.remuneracao))} />
+          <Info label="Base de Cálculo" value={fmtBRL(Number(folha.base_calculo))} />
+          <Info label={`Servidor (${folha.aliquota_servidor}%)`} value={fmtBRL(Number(folha.valor_servidor))} />
+          <Info label={`Patronal (${folha.aliquota_patronal}%)`} value={fmtBRL(Number(folha.valor_patronal))} />
+          <div>
+            <p className="text-muted-foreground">Status</p>
+            <Badge className={folha.paga ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}>
+              {folha.paga ? "Paga" : "Pendente"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader><CardTitle className="text-base">Valores</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="remuneracao">Remuneração (R$)</Label>
-                <Input id="remuneracao" type="number" step="0.01" placeholder="0,00" value={form.remuneracao} onChange={(e) => handleChange("remuneracao", e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="baseCalculo">Base de Cálculo (R$)</Label>
-                <Input id="baseCalculo" type="number" step="0.01" placeholder="0,00" value={form.baseCalculo} onChange={(e) => handleChange("baseCalculo", e.target.value)} required />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="aliqServ">Alíquota Servidor (%)</Label>
-                <Input id="aliqServ" type="number" step="0.01" value={form.aliquotaServidor} onChange={(e) => handleChange("aliquotaServidor", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aliqPat">Alíquota Patronal (%)</Label>
-                <Input id="aliqPat" type="number" step="0.01" value={form.aliquotaPatronal} onChange={(e) => handleChange("aliquotaPatronal", e.target.value)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Contribuição Servidor</p>
-                <p className="text-lg font-bold text-foreground">{fmt(valorServidor)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Contribuição Patronal</p>
-                <p className="text-lg font-bold text-foreground">{fmt(valorPatronal)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />Lançamento do Pagamento
+              <CreditCard className="h-4 w-4" />Pagamento
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="valorPago">Valor Pago (R$)</Label>
-                <Input id="valorPago" type="number" step="0.01" placeholder="0,00" value={form.valorPago} onChange={(e) => handleChange("valorPago", e.target.value)} />
+                <Label htmlFor="tipoPag">Tipo de Contribuição</Label>
+                <Select value={tipo} onValueChange={setTipo}>
+                  <SelectTrigger id="tipoPag"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="servidor">Servidor</SelectItem>
+                    <SelectItem value="patronal">Patronal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Valor previsto: {fmtBRL(valorSugerido)}</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="valorRecebido">Valor Recebido pela Caixa (R$)</Label>
-                <Input id="valorRecebido" type="number" step="0.01" placeholder="0,00" value={form.valorRecebido} onChange={(e) => handleChange("valorRecebido", e.target.value)} />
+                <Label htmlFor="valorPag">Valor do Pagamento (R$)</Label>
+                <CurrencyInput id="valorPag" value={valor} onValueChange={setValor} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="obs">Observações (opcional)</Label>
+              <Textarea id="obs" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Informações adicionais sobre o pagamento" />
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" size="lg" disabled={loading}>
+                <Save className="h-4 w-4 mr-2" />
+                {loading ? "Salvando..." : "Lançar Pagamento"}
+              </Button>
             </div>
           </CardContent>
         </Card>
-
-        <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={loading}>
-            <Save className="h-4 w-4 mr-2" />
-            {loading ? "Salvando..." : "Salvar Folha"}
-          </Button>
-        </div>
       </form>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-muted-foreground">{label}</p>
+      <p className="font-medium text-foreground capitalize">{value}</p>
     </div>
   );
 }
