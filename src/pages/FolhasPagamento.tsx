@@ -61,7 +61,7 @@ export default function FolhasPagamento() {
           <h1 className="text-2xl font-bold text-foreground">Folhas de Pagamento</h1>
           <p className="text-muted-foreground mt-1">Gerencie e acompanhe as folhas de pagamento</p>
         </div>
-        <Button onClick={() => navigate("/lancamentos")}>
+        <Button onClick={() => navigate("/folhas/nova")}>
           <Plus className="h-4 w-4 mr-2" />Nova Folha
         </Button>
       </div>

@@ -17,7 +17,6 @@ import logo from "@/assets/logo.jpeg";
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/folhas", icon: FileText, label: "Folhas de Pagamento" },
-  { to: "/lancamentos", icon: CreditCard, label: "Lançar Pagamento" },
   { to: "/guias", icon: FileDown, label: "Guias PDF" },
   { to: "/cadastro", icon: Users, label: "Cadastro" },
   { to: "/configuracoes", icon: Settings, label: "Configurações" },

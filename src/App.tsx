@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import FolhasPagamento from "./pages/FolhasPagamento";
+import NovaFolha from "./pages/NovaFolha";
 import LancarPagamento from "./pages/LancarPagamento";
 import GuiasPDF from "./pages/GuiasPDF";
 import Cadastro from "./pages/Cadastro";
@@ -39,8 +40,9 @@ const App = () => (
             >
               <Route path="/" element={<Dashboard />} />
               <Route path="/folhas" element={<FolhasPagamento />} />
-              <Route path="/lancamentos" element={<LancarPagamento />} />
+              <Route path="/folhas/nova" element={<NovaFolha />} />
               <Route path="/guias" element={<GuiasPDF />} />
+              <Route path="/guias/:folhaId/pagamento" element={<LancarPagamento />} />
               <Route path="/cadastro" element={<Cadastro />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
