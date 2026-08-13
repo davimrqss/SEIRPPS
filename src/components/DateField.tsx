@@ -21,12 +21,12 @@ export function DateField({ value, onChange, id, required, className }: DateFiel
   const [text, setText] = useState(isoToBR(value));
   const [open, setOpen] = useState(false);
 
-  // mantém o texto sincronizado quando o valor vem de fora (calendário / reset)
-  const displayed = isoToBR(value);
-  if (displayed && brToISO(text) !== value) {
-    // só re-sincroniza se o texto não representa o mesmo valor
-    if (isoToBR(value) !== text && brToISO(text) === "") setText(displayed);
-  }
+  // re-sincroniza o texto quando o valor muda por fora (calendário, reset, carregamento)
+  useEffect(() => {
+    if (brToISO(text) !== value) setText(isoToBR(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
 
   const handleText = (raw: string) => {
     const masked = maskDateInput(raw);
