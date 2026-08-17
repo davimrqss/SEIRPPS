@@ -127,7 +127,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     toast({ title: "Folha excluída", description: `${folha.centro_custo} - ${folha.mes_referencia}` });
   };
 
-  const base = parseFloat(form.base_calculo) || 0;
+  const base = parseCurrency(form.base_calculo);
   const previewServ = base * ((parseFloat(form.aliquota_servidor) || 0) / 100);
   const previewPat = base * ((parseFloat(form.aliquota_patronal) || 0) / 100);
 
