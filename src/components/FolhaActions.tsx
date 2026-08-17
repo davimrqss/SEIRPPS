@@ -236,11 +236,11 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="e-remun">Remuneração (R$)</Label>
-                <Input id="e-remun" type="number" step="0.01" value={form.remuneracao} onChange={(e) => change("remuneracao", e.target.value)} required />
+                <CurrencyInput id="e-remun" value={form.remuneracao} onValueChange={(v) => change("remuneracao", v)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="e-base">Base de Cálculo (R$)</Label>
-                <Input id="e-base" type="number" step="0.01" value={form.base_calculo} onChange={(e) => change("base_calculo", e.target.value)} required />
+                <CurrencyInput id="e-base" value={form.base_calculo} onValueChange={(v) => change("base_calculo", v)} required />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
