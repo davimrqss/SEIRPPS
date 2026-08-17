@@ -39,12 +39,12 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const initial = () => ({
     centro_custo: folha.centro_custo,
     orgao: folha.orgao,
-    mes_referencia: folha.mes_referencia,
-    remuneracao: String(folha.remuneracao),
-    base_calculo: String(folha.base_calculo),
+    vencimento: folha.vencimento,
+    remuneracao: currencyToInput(folha.remuneracao),
+    base_calculo: currencyToInput(folha.base_calculo),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
     is_13: folha.is_13,
@@ -52,19 +52,10 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     paga: folha.paga,
   });
 
+  const [form, setForm] = useState(initial);
+
   const openEdit = () => {
-    setForm({
-      centro_custo: folha.centro_custo,
-      orgao: folha.orgao,
-      mes_referencia: folha.mes_referencia,
-      remuneracao: String(folha.remuneracao),
-      base_calculo: String(folha.base_calculo),
-      aliquota_servidor: String(folha.aliquota_servidor),
-      aliquota_patronal: String(folha.aliquota_patronal),
-      is_13: folha.is_13,
-      tipo: folha.tipo,
-      paga: folha.paga,
-    });
+    setForm(initial());
     setEditOpen(true);
   };
 
@@ -74,12 +65,17 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["folhas"] });
     queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["folhas-guias"] });
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.vencimento) {
+      toast({ title: "Data inválida", description: "Informe o vencimento no formato dd-mm-aaaa.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
-    const base = parseFloat(form.base_calculo) || 0;
+    const base = parseCurrency(form.base_calculo);
     const aliqServ = parseFloat(form.aliquota_servidor) || 0;
     const aliqPat = parseFloat(form.aliquota_patronal) || 0;
 
@@ -88,9 +84,9 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       .update({
         centro_custo: form.centro_custo,
         orgao: form.orgao,
-        mes_referencia: form.mes_referencia,
-        vencimento: form.mes_referencia + "-20",
-        remuneracao: parseFloat(form.remuneracao) || 0,
+        mes_referencia: form.vencimento.slice(0, 7),
+        vencimento: form.vencimento,
+        remuneracao: parseCurrency(form.remuneracao),
         base_calculo: base,
         valor_servidor: base * (aliqServ / 100),
         valor_patronal: base * (aliqPat / 100),
