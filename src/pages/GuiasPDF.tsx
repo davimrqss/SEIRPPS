@@ -3,21 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileDown, Download, Eye } from "lucide-react";
+import { FileDown, Download, Eye, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { downloadGuia, previewGuia } from "@/lib/guiaPdf";
+import { fmtBRL } from "@/lib/format";
 
 export default function GuiasPDF() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [filtroMes, setFiltroMes] = useState<string>("todos");
 
   const { data: folhas = [], isLoading } = useQuery({
     queryKey: ["folhas-guias"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("folhas_pagamento").select("*").order("mes_referencia", { ascending: false });
+      const { data, error } = await supabase
+        .from("folhas_pagamento")
+        .select("*")
+        .order("mes_referencia", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: caixaNome } = useQuery({
+    queryKey: ["caixa-nome-guias"],
+    queryFn: async () => {
+      const { data } = await supabase.from("caixas_previdencia").select("nome").limit(1).maybeSingle();
+      return data?.nome ?? null;
     },
   });
 
@@ -34,11 +49,13 @@ export default function GuiasPDF() {
   const formatMes = (mes: string) =>
     new Date(mes + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const fmt = (v: number) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const handleVisualizar = (folha: (typeof folhas)[0]) => {
+    previewGuia(folha, caixaNome ?? undefined);
+  };
 
-  const handleGerarGuia = (folha: (typeof folhas)[0]) => {
-    toast({ title: "Guia gerada!", description: `Guia para ${folha.centro_custo} - ${formatMes(folha.mes_referencia)}` });
+  const handleBaixar = (folha: (typeof folhas)[0]) => {
+    downloadGuia(folha, caixaNome ?? undefined);
+    toast({ title: "Guia gerada!", description: `${folha.centro_custo} - ${formatMes(folha.mes_referencia)}` });
   };
 
   if (isLoading) {
@@ -95,23 +112,33 @@ export default function GuiasPDF() {
                 <div className="space-y-1 text-sm mb-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Servidor:</span>
-                    <span className="font-medium text-foreground">{fmt(Number(folha.valor_servidor))}</span>
+                    <span className="font-medium text-foreground">{fmtBRL(Number(folha.valor_servidor))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Patronal:</span>
-                    <span className="font-medium text-foreground">{fmt(Number(folha.valor_patronal))}</span>
+                    <span className="font-medium text-foreground">{fmtBRL(Number(folha.valor_patronal))}</span>
                   </div>
                   <div className="flex justify-between border-t border-border pt-1">
                     <span className="font-medium text-foreground">Total:</span>
-                    <span className="font-bold text-foreground">{fmt(Number(folha.valor_servidor) + Number(folha.valor_patronal))}</span>
+                    <span className="font-bold text-foreground">{fmtBRL(Number(folha.valor_servidor) + Number(folha.valor_patronal))}</span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleGerarGuia(folha)}>
-                    <Eye className="h-3.5 w-3.5 mr-1" />Visualizar
-                  </Button>
-                  <Button size="sm" className="flex-1" onClick={() => handleGerarGuia(folha)}>
-                    <Download className="h-3.5 w-3.5 mr-1" />Baixar PDF
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleVisualizar(folha)}>
+                      <Eye className="h-3.5 w-3.5 mr-1" />Visualizar
+                    </Button>
+                    <Button size="sm" className="flex-1" onClick={() => handleBaixar(folha)}>
+                      <Download className="h-3.5 w-3.5 mr-1" />Baixar PDF
+                    </Button>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(`/guias/${folha.id}/pagamento`)}
+                  >
+                    <CreditCard className="h-3.5 w-3.5 mr-1" />Lançar Pagamento
                   </Button>
                 </div>
               </CardContent>
