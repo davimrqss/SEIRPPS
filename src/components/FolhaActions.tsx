@@ -18,6 +18,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { CurrencyInput } from "@/components/CurrencyInput";
+import { DateField } from "@/components/DateField";
+import { currencyToInput, parseCurrency } from "@/lib/format";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Folha = Tables<"folhas_pagamento">;
@@ -36,12 +39,12 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const initial = () => ({
     centro_custo: folha.centro_custo,
     orgao: folha.orgao,
-    mes_referencia: folha.mes_referencia,
-    remuneracao: String(folha.remuneracao),
-    base_calculo: String(folha.base_calculo),
+    vencimento: folha.vencimento,
+    remuneracao: currencyToInput(folha.remuneracao),
+    base_calculo: currencyToInput(folha.base_calculo),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
     is_13: folha.is_13,
@@ -49,19 +52,10 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     paga: folha.paga,
   });
 
+  const [form, setForm] = useState(initial);
+
   const openEdit = () => {
-    setForm({
-      centro_custo: folha.centro_custo,
-      orgao: folha.orgao,
-      mes_referencia: folha.mes_referencia,
-      remuneracao: String(folha.remuneracao),
-      base_calculo: String(folha.base_calculo),
-      aliquota_servidor: String(folha.aliquota_servidor),
-      aliquota_patronal: String(folha.aliquota_patronal),
-      is_13: folha.is_13,
-      tipo: folha.tipo,
-      paga: folha.paga,
-    });
+    setForm(initial());
     setEditOpen(true);
   };
 
@@ -71,12 +65,17 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["folhas"] });
     queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["folhas-guias"] });
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.vencimento) {
+      toast({ title: "Data inválida", description: "Informe o vencimento no formato dd-mm-aaaa.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
-    const base = parseFloat(form.base_calculo) || 0;
+    const base = parseCurrency(form.base_calculo);
     const aliqServ = parseFloat(form.aliquota_servidor) || 0;
     const aliqPat = parseFloat(form.aliquota_patronal) || 0;
 
@@ -85,9 +84,9 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       .update({
         centro_custo: form.centro_custo,
         orgao: form.orgao,
-        mes_referencia: form.mes_referencia,
-        vencimento: form.mes_referencia + "-20",
-        remuneracao: parseFloat(form.remuneracao) || 0,
+        mes_referencia: form.vencimento.slice(0, 7),
+        vencimento: form.vencimento,
+        remuneracao: parseCurrency(form.remuneracao),
         base_calculo: base,
         valor_servidor: base * (aliqServ / 100),
         valor_patronal: base * (aliqPat / 100),
@@ -128,7 +127,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     toast({ title: "Folha excluída", description: `${folha.centro_custo} - ${folha.mes_referencia}` });
   };
 
-  const base = parseFloat(form.base_calculo) || 0;
+  const base = parseCurrency(form.base_calculo);
   const previewServ = base * ((parseFloat(form.aliquota_servidor) || 0) / 100);
   const previewPat = base * ((parseFloat(form.aliquota_patronal) || 0) / 100);
 
@@ -216,8 +215,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="e-mes">Mês de Referência</Label>
-                <Input id="e-mes" type="month" value={form.mes_referencia} onChange={(e) => change("mes_referencia", e.target.value)} required />
+                <Label htmlFor="e-venc">Vencimento</Label>
+                <DateField id="e-venc" value={form.vencimento} onChange={(iso) => change("vencimento", iso)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="e-tipo">Tipo de Folha</Label>
@@ -237,11 +236,11 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="e-remun">Remuneração (R$)</Label>
-                <Input id="e-remun" type="number" step="0.01" value={form.remuneracao} onChange={(e) => change("remuneracao", e.target.value)} required />
+                <CurrencyInput id="e-remun" value={form.remuneracao} onValueChange={(v) => change("remuneracao", v)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="e-base">Base de Cálculo (R$)</Label>
-                <Input id="e-base" type="number" step="0.01" value={form.base_calculo} onChange={(e) => change("base_calculo", e.target.value)} required />
+                <CurrencyInput id="e-base" value={form.base_calculo} onValueChange={(v) => change("base_calculo", v)} required />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
