@@ -215,8 +215,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="e-mes">Mês de Referência</Label>
-                <Input id="e-mes" type="month" value={form.mes_referencia} onChange={(e) => change("mes_referencia", e.target.value)} required />
+                <Label htmlFor="e-venc">Vencimento</Label>
+                <DateField id="e-venc" value={form.vencimento} onChange={(iso) => change("vencimento", iso)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="e-tipo">Tipo de Folha</Label>
