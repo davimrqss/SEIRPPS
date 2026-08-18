@@ -6,7 +6,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <main className="relative flex-1 p-8 overflow-auto">
+      <main className="relative flex-1 overflow-auto px-8 pb-10 pt-24">
         <div className="absolute right-6 top-6 z-50">
           <ThemeToggle />
         </div>
@@ -15,4 +15,3 @@ export function AppLayout() {
     </div>
   );
 }
-

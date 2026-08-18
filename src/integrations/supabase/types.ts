@@ -16,33 +16,60 @@ export type Database = {
     Tables: {
       caixas_previdencia: {
         Row: {
+          aliquota_patronal: number
+          aliquota_servidor: number
+          aliquota_suplementar: number
+          cep: string | null
           cnpj: string | null
           created_at: string
           email: string | null
+          empresa: string | null
           endereco: string | null
+          estado: string | null
           id: string
+          logo_url: string | null
+          municipio: string | null
           nome: string
           telefone: string | null
+          uf: string | null
           updated_at: string
         }
         Insert: {
+          aliquota_patronal?: number
+          aliquota_servidor?: number
+          aliquota_suplementar?: number
+          cep?: string | null
           cnpj?: string | null
           created_at?: string
           email?: string | null
+          empresa?: string | null
           endereco?: string | null
+          estado?: string | null
           id?: string
+          logo_url?: string | null
+          municipio?: string | null
           nome: string
           telefone?: string | null
+          uf?: string | null
           updated_at?: string
         }
         Update: {
+          aliquota_patronal?: number
+          aliquota_servidor?: number
+          aliquota_suplementar?: number
+          cep?: string | null
           cnpj?: string | null
           created_at?: string
           email?: string | null
+          empresa?: string | null
           endereco?: string | null
+          estado?: string | null
           id?: string
+          logo_url?: string | null
+          municipio?: string | null
           nome?: string
           telefone?: string | null
+          uf?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -51,58 +78,82 @@ export type Database = {
         Row: {
           aliquota_patronal: number
           aliquota_servidor: number
+          aux_doenca: number
           base_calculo: number
           caixa_id: string
           centro_custo: string
+          codigo_centro_custo: string | null
           created_at: string
+          grupo_folha: string
           id: string
           is_13: boolean
+          juros_multa: number
           mes_referencia: string
+          num_empregados: number
           orgao: string
           paga: boolean
           remuneracao: number
+          salario_familia: number
+          salario_maternidade: number
           tipo: string
           updated_at: string
           valor_patronal: number
           valor_servidor: number
+          valor_suplementar: number
           vencimento: string
         }
         Insert: {
           aliquota_patronal?: number
           aliquota_servidor?: number
+          aux_doenca?: number
           base_calculo?: number
           caixa_id: string
           centro_custo: string
+          codigo_centro_custo?: string | null
           created_at?: string
+          grupo_folha?: string
           id?: string
           is_13?: boolean
+          juros_multa?: number
           mes_referencia: string
+          num_empregados?: number
           orgao: string
           paga?: boolean
           remuneracao?: number
+          salario_familia?: number
+          salario_maternidade?: number
           tipo?: string
           updated_at?: string
           valor_patronal?: number
           valor_servidor?: number
+          valor_suplementar?: number
           vencimento: string
         }
         Update: {
           aliquota_patronal?: number
           aliquota_servidor?: number
+          aux_doenca?: number
           base_calculo?: number
           caixa_id?: string
           centro_custo?: string
+          codigo_centro_custo?: string | null
           created_at?: string
+          grupo_folha?: string
           id?: string
           is_13?: boolean
+          juros_multa?: number
           mes_referencia?: string
+          num_empregados?: number
           orgao?: string
           paga?: boolean
           remuneracao?: number
+          salario_familia?: number
+          salario_maternidade?: number
           tipo?: string
           updated_at?: string
           valor_patronal?: number
           valor_servidor?: number
+          valor_suplementar?: number
           vencimento?: string
         }
         Relationships: [
