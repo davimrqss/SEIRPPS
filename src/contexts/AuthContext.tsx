@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 type AppRole = "admin" | "gestor_financeiro" | "operador";
 
@@ -14,7 +13,13 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   refreshProfile: () => Promise<void>;
+  /** Caixa atualmente em uso. Para não-admins é sempre a caixa do perfil. */
+  activeCaixaId: string | null;
+  setActiveCaixaId: (id: string) => void;
+  isAdmin: boolean;
 }
+
+const STORAGE_KEY = "prevsys.activeCaixaId";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -24,6 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminCaixaId, setAdminCaixaId] = useState<string | null>(
+    () => localStorage.getItem(STORAGE_KEY)
+  );
 
   const fetchProfileAndRoles = async (userId: string) => {
     const { data: profileData } = await supabase
@@ -71,13 +79,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasRole = (role: AppRole) => roles.includes(role);
+  const isAdmin = roles.includes("admin");
 
   const refreshProfile = async () => {
     if (user) await fetchProfileAndRoles(user.id);
   };
 
+  const setActiveCaixaId = (id: string) => {
+    localStorage.setItem(STORAGE_KEY, id);
+    setAdminCaixaId(id);
+  };
+
+  // Só admins podem alternar de caixa; os outros ficam presos à caixa do perfil.
+  const activeCaixaId = isAdmin ? adminCaixaId ?? profile?.caixa_id ?? null : profile?.caixa_id ?? null;
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, roles, loading, signOut, hasRole, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        profile,
+        roles,
+        loading,
+        signOut,
+        hasRole,
+        refreshProfile,
+        activeCaixaId,
+        setActiveCaixaId,
+        isAdmin,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
