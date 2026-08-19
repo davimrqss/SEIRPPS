@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { CurrencyInput } from "@/components/CurrencyInput";
@@ -19,21 +20,41 @@ import { fmtBRL, parseCurrency } from "@/lib/format";
 
 export default function NovaFolha() {
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { activeCaixaId } = useAuth();
+  const { data: caixa } = useCaixaAtiva();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     centroCusto: "",
+    codigoCentroCusto: "",
     orgao: "",
     vencimento: "",
+    numEmpregados: "",
+    grupoFolha: "1 - Normal",
     remuneracao: "",
     baseCalculo: "",
     aliquotaServidor: "11",
     aliquotaPatronal: "22",
+    aliquotaSuplementar: "0",
+    salarioMaternidade: "",
+    salarioFamilia: "",
+    auxDoenca: "",
+    jurosMulta: "",
     is13: false,
     tipo: "servidor",
   });
+
+  // Alíquotas padrão vindas da caixa ativa
+  useEffect(() => {
+    if (!caixa) return;
+    setForm((prev) => ({
+      ...prev,
+      aliquotaServidor: String(caixa.aliquota_servidor ?? prev.aliquotaServidor),
+      aliquotaPatronal: String(caixa.aliquota_patronal ?? prev.aliquotaPatronal),
+      aliquotaSuplementar: String(caixa.aliquota_suplementar ?? prev.aliquotaSuplementar),
+    }));
+  }, [caixa]);
 
   const handleChange = (field: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -41,13 +62,15 @@ export default function NovaFolha() {
   const baseCalc = parseCurrency(form.baseCalculo);
   const aliqServ = parseFloat(form.aliquotaServidor) || 0;
   const aliqPat = parseFloat(form.aliquotaPatronal) || 0;
+  const aliqSup = parseFloat(form.aliquotaSuplementar) || 0;
   const valorServidor = baseCalc * (aliqServ / 100);
   const valorPatronal = baseCalc * (aliqPat / 100);
+  const valorSuplementar = baseCalc * (aliqSup / 100);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.caixa_id) {
-      toast({ title: "Erro", description: "Você precisa estar vinculado a uma caixa de previdência.", variant: "destructive" });
+    if (!activeCaixaId) {
+      toast({ title: "Erro", description: "Selecione uma caixa de previdência.", variant: "destructive" });
       return;
     }
     if (!form.vencimento) {
@@ -60,18 +83,26 @@ export default function NovaFolha() {
 
     const { error } = await supabase.from("folhas_pagamento").insert({
       centro_custo: form.centroCusto,
+      codigo_centro_custo: form.codigoCentroCusto || null,
       orgao: form.orgao,
       mes_referencia: mesReferencia,
       vencimento: form.vencimento,
+      num_empregados: parseInt(form.numEmpregados) || 0,
+      grupo_folha: form.grupoFolha,
       remuneracao: parseCurrency(form.remuneracao),
       base_calculo: baseCalc,
       valor_servidor: valorServidor,
       valor_patronal: valorPatronal,
+      valor_suplementar: valorSuplementar,
+      salario_maternidade: parseCurrency(form.salarioMaternidade),
+      salario_familia: parseCurrency(form.salarioFamilia),
+      aux_doenca: parseCurrency(form.auxDoenca),
+      juros_multa: parseCurrency(form.jurosMulta),
       aliquota_servidor: aliqServ,
       aliquota_patronal: aliqPat,
       is_13: form.is13,
       tipo: form.tipo,
-      caixa_id: profile.caixa_id,
+      caixa_id: activeCaixaId,
     });
 
     setLoading(false);
@@ -101,7 +132,11 @@ export default function NovaFolha() {
         <Card>
           <CardHeader><CardTitle className="text-base">Dados da Folha</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="codigoCentroCusto">Código Centro de Custo</Label>
+                <Input id="codigoCentroCusto" placeholder="Ex: 001" value={form.codigoCentroCusto} onChange={(e) => handleChange("codigoCentroCusto", e.target.value)} />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="centroCusto">Centro de Custo</Label>
                 <Input id="centroCusto" placeholder="Ex: Secretaria de Educação" value={form.centroCusto} onChange={(e) => handleChange("centroCusto", e.target.value)} required />
@@ -113,9 +148,19 @@ export default function NovaFolha() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vencimento">Data de Vencimento</Label>
+                <Label htmlFor="vencimento">Data de Recolhimento</Label>
                 <DateField id="vencimento" value={form.vencimento} onChange={(v) => handleChange("vencimento", v)} required />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="numEmpregados">Nº de Empregados</Label>
+                <Input id="numEmpregados" type="number" min="0" value={form.numEmpregados} onChange={(e) => handleChange("numEmpregados", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="grupoFolha">Grupo Folha</Label>
+                <Input id="grupoFolha" value={form.grupoFolha} onChange={(e) => handleChange("grupoFolha", e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo de Folha</Label>
                 <Select value={form.tipo} onValueChange={(v) => handleChange("tipo", v)}>
@@ -143,28 +188,66 @@ export default function NovaFolha() {
                 <CurrencyInput id="remuneracao" value={form.remuneracao} onValueChange={(v) => handleChange("remuneracao", v)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="baseCalculo">Base de Cálculo (R$)</Label>
+                <Label htmlFor="baseCalculo">Salário de Contribuição / Base (R$)</Label>
                 <CurrencyInput id="baseCalculo" value={form.baseCalculo} onValueChange={(v) => handleChange("baseCalculo", v)} required />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="aliqServ">Alíquota Servidor (%)</Label>
+                <Label htmlFor="aliqServ">Alíquota Segurado (%)</Label>
                 <Input id="aliqServ" type="number" step="0.01" value={form.aliquotaServidor} onChange={(e) => handleChange("aliquotaServidor", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="aliqPat">Alíquota Patronal (%)</Label>
                 <Input id="aliqPat" type="number" step="0.01" value={form.aliquotaPatronal} onChange={(e) => handleChange("aliquotaPatronal", e.target.value)} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="aliqSup">Alíquota Suplementar (%)</Label>
+                <Input id="aliqSup" type="number" step="0.01" value={form.aliquotaSuplementar} onChange={(e) => handleChange("aliquotaSuplementar", e.target.value)} />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="salMat">Salário Maternidade (R$)</Label>
+                <CurrencyInput id="salMat" value={form.salarioMaternidade} onValueChange={(v) => handleChange("salarioMaternidade", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="salFam">Salário Família (R$)</Label>
+                <CurrencyInput id="salFam" value={form.salarioFamilia} onValueChange={(v) => handleChange("salarioFamilia", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="auxDoenca">Auxílio Doença (R$)</Label>
+                <CurrencyInput id="auxDoenca" value={form.auxDoenca} onValueChange={(v) => handleChange("auxDoenca", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jurosMulta">Juros / Multa (R$)</Label>
+                <CurrencyInput id="jurosMulta" value={form.jurosMulta} onValueChange={(v) => handleChange("jurosMulta", v)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Contribuição Servidor</p>
+                <p className="text-sm text-muted-foreground">Segurados</p>
                 <p className="text-lg font-bold text-foreground">{fmtBRL(valorServidor)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Contribuição Patronal</p>
+                <p className="text-sm text-muted-foreground">Patronal</p>
                 <p className="text-lg font-bold text-foreground">{fmtBRL(valorPatronal)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Suplementar</p>
+                <p className="text-lg font-bold text-foreground">{fmtBRL(valorSuplementar)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total a recolher</p>
+                <p className="text-lg font-bold text-foreground">
+                  {fmtBRL(
+                    valorServidor + valorPatronal + valorSuplementar
+                    - parseCurrency(form.salarioMaternidade)
+                    - parseCurrency(form.salarioFamilia)
+                    - parseCurrency(form.auxDoenca)
+                    + parseCurrency(form.jurosMulta)
+                  )}
+                </p>
               </div>
             </div>
           </CardContent>
