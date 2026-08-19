@@ -13,19 +13,24 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Cadastro() {
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { activeCaixaId } = useAuth();
   const queryClient = useQueryClient();
   const [busca, setBusca] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ nome: "", cpf: "", orgao: "", cargo: "", dataNascimento: "", email: "" });
 
   const { data: funcionarios = [], isLoading } = useQuery({
-    queryKey: ["funcionarios"],
+    queryKey: ["funcionarios", activeCaixaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("funcionarios").select("*").order("nome");
+      const { data, error } = await supabase
+        .from("funcionarios")
+        .select("*")
+        .eq("caixa_id", activeCaixaId!)
+        .order("nome");
       if (error) throw error;
       return data;
     },
+    enabled: !!activeCaixaId,
   });
 
   const funcionariosFiltrados = funcionarios.filter(
@@ -37,8 +42,8 @@ export default function Cadastro() {
 
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.caixa_id) {
-      toast({ title: "Erro", description: "Vincule-se a uma caixa primeiro.", variant: "destructive" });
+    if (!activeCaixaId) {
+      toast({ title: "Erro", description: "Selecione uma caixa de previdência primeiro.", variant: "destructive" });
       return;
     }
 
@@ -49,8 +54,9 @@ export default function Cadastro() {
       cargo: formData.cargo,
       data_nascimento: formData.dataNascimento || null,
       email: formData.email || null,
-      caixa_id: profile.caixa_id,
+      caixa_id: activeCaixaId,
     });
+
 
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });

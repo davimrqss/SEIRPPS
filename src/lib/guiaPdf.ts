@@ -3,6 +3,7 @@ import { fmtBRL, isoToBR } from "./format";
 
 export interface GuiaFolha {
   centro_custo: string;
+  codigo_centro_custo?: string | null;
   orgao: string;
   mes_referencia: string;
   vencimento: string;
@@ -10,82 +11,170 @@ export interface GuiaFolha {
   base_calculo: number | string;
   valor_servidor: number | string;
   valor_patronal: number | string;
+  valor_suplementar?: number | string | null;
+  salario_maternidade?: number | string | null;
+  salario_familia?: number | string | null;
+  aux_doenca?: number | string | null;
+  juros_multa?: number | string | null;
+  num_empregados?: number | null;
+  grupo_folha?: string | null;
   aliquota_servidor: number | string;
   aliquota_patronal: number | string;
+  aliquota_suplementar?: number | string | null;
   is_13: boolean;
   tipo: string;
   paga: boolean;
 }
 
-const formatMes = (mes: string) =>
-  new Date(mes + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+export interface GuiaCaixa {
+  nome?: string | null;
+  cnpj?: string | null;
+  empresa?: string | null;
+  endereco?: string | null;
+  cep?: string | null;
+  municipio?: string | null;
+  uf?: string | null;
+  estado?: string | null;
+}
 
-export function buildGuiaPDF(folha: GuiaFolha, caixaNome = "Caixa de Previdência") {
+const n = (v: unknown) => Number(v ?? 0) || 0;
+
+const competencia = (mes: string) => {
+  const [y, m] = mes.split("-");
+  return `${m}/${y}`;
+};
+
+export function buildGuiaPDF(folha: GuiaFolha, caixa: GuiaCaixa = {}) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
-  const M = 48;
-  let y = M;
+  const M = 36;
+  const R = W - M;
+  const colSplit = M + (R - M) * 0.55;
 
-  doc.setFillColor(22, 101, 82);
-  doc.rect(0, 0, W, 90, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold").setFontSize(16);
-  doc.text(caixaNome, M, 42);
-  doc.setFont("helvetica", "normal").setFontSize(11);
-  doc.text("Guia de Recolhimento de Contribuição Previdenciária", M, 62);
-  y = 130;
-
-  doc.setTextColor(30, 30, 30);
-  const row = (label: string, value: string) => {
-    doc.setFont("helvetica", "normal").setFontSize(10);
-    doc.setTextColor(110, 110, 110);
-    doc.text(label, M, y);
-    doc.setFont("helvetica", "bold").setFontSize(11);
-    doc.setTextColor(25, 25, 25);
-    doc.text(value, W - M, y, { align: "right" });
-    y += 24;
-    doc.setDrawColor(230, 230, 230);
-    doc.line(M, y - 14, W - M, y - 14);
+  const line = (y: number, x1 = M, x2 = R) => {
+    doc.setDrawColor(120, 120, 120);
+    doc.line(x1, y, x2, y);
+  };
+  const label = (t: string, x: number, y: number) => {
+    doc.setFont("helvetica", "normal").setFontSize(7).setTextColor(90, 90, 90);
+    doc.text(t.toUpperCase(), x, y);
+  };
+  const value = (t: string, x: number, y: number, opts?: { bold?: boolean; size?: number; align?: "left" | "right"; color?: [number, number, number] }) => {
+    doc
+      .setFont("helvetica", opts?.bold ? "bold" : "normal")
+      .setFontSize(opts?.size ?? 9)
+      .setTextColor(...(opts?.color ?? [20, 20, 20]));
+    doc.text(t, x, y, { align: opts?.align ?? "left" });
   };
 
-  doc.setFont("helvetica", "bold").setFontSize(12);
-  doc.text("Identificação", M, y);
-  y += 24;
-  row("Centro de Custo", folha.centro_custo);
-  row("Órgão", folha.orgao);
-  row("Mês de Referência", formatMes(folha.mes_referencia));
-  row("Vencimento", isoToBR(folha.vencimento));
-  row("Tipo de Folha", folha.tipo.charAt(0).toUpperCase() + folha.tipo.slice(1));
-  row("13° Salário", folha.is_13 ? "Sim" : "Não");
+  // ---- Cabeçalho
+  let y = M;
+  doc.setDrawColor(60, 60, 60).setLineWidth(1);
+  doc.rect(M, y, R - M, 62);
+  doc.setLineWidth(0.5);
+  value(caixa.nome || "Caixa de Previdência", M + 10, y + 20, { bold: true, size: 12 });
+  value(
+    "GUIA DE RECOLHIMENTO DE PREVIDÊNCIA PRÓPRIA",
+    M + 10,
+    y + 36,
+    { bold: true, size: 9 }
+  );
+  const enderecoLinha = [caixa.endereco, caixa.municipio, caixa.uf, caixa.cep]
+    .filter(Boolean)
+    .join(" - ");
+  value(enderecoLinha || caixa.estado || "", M + 10, y + 50, { size: 7.5, color: [90, 90, 90] });
+  if (caixa.cnpj) value(`CNPJ: ${caixa.cnpj}`, R - 10, y + 20, { size: 8, align: "right" });
 
-  y += 12;
-  doc.setFont("helvetica", "bold").setFontSize(12);
-  doc.text("Valores", M, y);
-  y += 24;
-  row("Remuneração", fmtBRL(Number(folha.remuneracao)));
-  row("Base de Cálculo", fmtBRL(Number(folha.base_calculo)));
-  row(`Contribuição Servidor (${folha.aliquota_servidor}%)`, fmtBRL(Number(folha.valor_servidor)));
-  row(`Contribuição Patronal (${folha.aliquota_patronal}%)`, fmtBRL(Number(folha.valor_patronal)));
+  y += 62;
 
-  const total = Number(folha.valor_servidor) + Number(folha.valor_patronal);
-  y += 8;
-  doc.setFillColor(240, 247, 244);
-  doc.rect(M, y - 4, W - M * 2, 42, "F");
-  doc.setFont("helvetica", "bold").setFontSize(12);
-  doc.setTextColor(22, 101, 82);
-  doc.text("TOTAL A RECOLHER", M + 14, y + 24);
-  doc.setFontSize(14);
-  doc.text(fmtBRL(total), W - M - 14, y + 24, { align: "right" });
-  y += 70;
+  // ---- Bloco identificação (esquerda) / competência (direita)
+  const boxTop = y + 12;
+  const rowsLeft: [string, string][] = [
+    ["Empresa / Órgão", caixa.empresa || folha.orgao],
+    ["Centro de custo", `${folha.codigo_centro_custo ? folha.codigo_centro_custo + " - " : ""}${folha.centro_custo}`],
+    ["Nº de empregados", String(folha.num_empregados ?? 0)],
+    ["Grupo folha", folha.grupo_folha || "1 - Normal"],
+    ["Salário de contribuição (base)", fmtBRL(n(folha.base_calculo))],
+    ["Remuneração total", fmtBRL(n(folha.remuneracao))],
+    ["Alíquota segurado", `${n(folha.aliquota_servidor)}%`],
+    ["Alíquota patronal", `${n(folha.aliquota_patronal)}%`],
+  ];
 
-  doc.setFont("helvetica", "normal").setFontSize(10);
-  doc.setTextColor(110, 110, 110);
-  doc.text(`Situação: ${folha.paga ? "Paga" : "Pendente"}`, M, y);
-  y += 16;
-  doc.text(
-    `Documento gerado em ${new Date().toLocaleString("pt-BR")}`,
-    M,
-    y
+  let ly = boxTop;
+  doc.rect(M, boxTop - 12, colSplit - M, rowsLeft.length * 26 + 18);
+  rowsLeft.forEach(([l, v]) => {
+    ly += 22;
+    label(l, M + 8, ly - 10);
+    value(v, M + 8, ly + 2, { bold: true });
+    line(ly + 8, M + 8, colSplit - 8);
+    ly += 4;
+  });
+
+  // Direita: valores da guia
+  const servidor = n(folha.valor_servidor);
+  const patronal = n(folha.valor_patronal);
+  const suplementar = n(folha.valor_suplementar);
+  const maternidade = n(folha.salario_maternidade);
+  const familia = n(folha.salario_familia);
+  const doenca = n(folha.aux_doenca);
+  const juros = n(folha.juros_multa);
+  const deducoes = maternidade + familia + doenca;
+  const bruto = servidor + patronal + suplementar;
+  const liquido = bruto - deducoes;
+  const total = liquido + juros;
+
+  let ry = boxTop;
+  doc.rect(colSplit, boxTop - 12, R - colSplit, rowsLeft.length * 26 + 18);
+  const rowRight = (l: string, v: string, opts?: { red?: boolean; bold?: boolean }) => {
+    ry += 22;
+    label(l, colSplit + 8, ry - 10);
+    value(v, R - 8, ry - 10, {
+      align: "right",
+      bold: opts?.bold ?? true,
+      color: opts?.red ? [190, 30, 30] : [20, 20, 20],
+    });
+    line(ry + 2, colSplit + 8, R - 8);
+    ry += 4;
+  };
+  rowRight("Competência", competencia(folha.mes_referencia) + (folha.is_13 ? " (13º)" : ""));
+  rowRight("Data de recolhimento", isoToBR(folha.vencimento));
+  rowRight("Contribuição segurados", fmtBRL(servidor));
+  rowRight("Contribuição empresa (patronal)", fmtBRL(patronal));
+  rowRight("Contribuição suplementar", fmtBRL(suplementar));
+  rowRight("(-) Salário maternidade", fmtBRL(maternidade), { red: true });
+  rowRight("(-) Salário família", fmtBRL(familia), { red: true });
+  rowRight("(-) Auxílio doença", fmtBRL(doenca), { red: true });
+
+  y = Math.max(ly, ry) + 22;
+
+  // ---- Totais
+  doc.rect(M, y, R - M, 78);
+  const totRow = (l: string, v: string, ty: number, big = false) => {
+    value(l, M + 10, ty, { bold: big, size: big ? 11 : 9 });
+    value(v, R - 10, ty, { bold: true, size: big ? 13 : 9, align: "right" });
+  };
+  totRow("Total líquido", fmtBRL(liquido), y + 20);
+  line(y + 28);
+  totRow("Juros / Multa", fmtBRL(juros), y + 44);
+  line(y + 52);
+  doc.setFillColor(240, 245, 242);
+  doc.rect(M + 1, y + 53, R - M - 2, 24, "F");
+  totRow("TOTAL A RECOLHER", fmtBRL(total), y + 70, true);
+
+  y += 100;
+
+  // ---- Autenticação mecânica
+  doc.rect(M, y, R - M, 70);
+  label("Autenticação mecânica", M + 10, y + 16);
+  value(`Situação: ${folha.paga ? "Paga" : "Pendente"}`, M + 10, y + 62, {
+    size: 7.5,
+    color: [110, 110, 110],
+  });
+  value(
+    `Emitido em ${new Date().toLocaleString("pt-BR")}`,
+    R - 10,
+    y + 62,
+    { size: 7.5, align: "right", color: [110, 110, 110] }
   );
 
   return doc;
@@ -94,11 +183,11 @@ export function buildGuiaPDF(folha: GuiaFolha, caixaNome = "Caixa de Previdênci
 export const guiaFileName = (folha: GuiaFolha) =>
   `guia-${folha.centro_custo.replace(/\s+/g, "-").toLowerCase()}-${folha.mes_referencia}.pdf`;
 
-export function downloadGuia(folha: GuiaFolha, caixaNome?: string) {
-  buildGuiaPDF(folha, caixaNome).save(guiaFileName(folha));
+export function downloadGuia(folha: GuiaFolha, caixa?: GuiaCaixa) {
+  buildGuiaPDF(folha, caixa).save(guiaFileName(folha));
 }
 
-export function previewGuia(folha: GuiaFolha, caixaNome?: string) {
-  const url = buildGuiaPDF(folha, caixaNome).output("bloburl");
+export function previewGuia(folha: GuiaFolha, caixa?: GuiaCaixa) {
+  const url = buildGuiaPDF(folha, caixa).output("bloburl");
   window.open(url as unknown as string, "_blank");
 }

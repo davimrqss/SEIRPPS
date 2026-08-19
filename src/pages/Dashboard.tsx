@@ -9,19 +9,24 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
+  const { activeCaixaId } = useAuth();
+
   const { data: folhas = [], isLoading } = useQuery({
-    queryKey: ["folhas-dashboard"],
+    queryKey: ["folhas-dashboard", activeCaixaId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("folhas_pagamento")
         .select("*")
+        .eq("caixa_id", activeCaixaId!)
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return data;
     },
+    enabled: !!activeCaixaId,
   });
 
   const totalFolhas = folhas.length;
@@ -29,13 +34,20 @@ export default function Dashboard() {
   const folhasPendentes = totalFolhas - folhasPagas;
 
   const { data: pagamentos = [] } = useQuery({
-    queryKey: ["pagamentos-dashboard"],
+    queryKey: ["pagamentos-dashboard", activeCaixaId, folhas.map((f) => f.id).join(",")],
     queryFn: async () => {
-      const { data, error } = await supabase.from("pagamentos").select("*");
+      const ids = folhas.map((f) => f.id);
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("*")
+        .in("folha_id", ids);
       if (error) throw error;
       return data;
     },
+    enabled: !!activeCaixaId,
   });
+
 
   const totalRecebido = pagamentos.reduce((s, p) => s + Number(p.valor_recebido), 0);
   const totalDevido = folhas.reduce(

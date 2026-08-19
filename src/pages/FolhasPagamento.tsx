@@ -10,24 +10,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { FolhaActions } from "@/components/FolhaActions";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function FolhasPagamento() {
   const navigate = useNavigate();
+  const { activeCaixaId } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
 
   const { data: folhas = [], isLoading } = useQuery({
-    queryKey: ["folhas"],
+    queryKey: ["folhas", activeCaixaId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("folhas_pagamento")
         .select("*")
+        .eq("caixa_id", activeCaixaId!)
         .order("mes_referencia", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!activeCaixaId,
   });
+
 
   const meses = useMemo(() => {
     const unique = [...new Set(folhas.map((f) => f.mes_referencia))];
