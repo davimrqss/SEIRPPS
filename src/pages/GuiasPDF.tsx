@@ -16,24 +16,21 @@ export default function GuiasPDF() {
   const navigate = useNavigate();
   const [filtroMes, setFiltroMes] = useState<string>("todos");
 
+  const { activeCaixaId } = useAuth();
+  const { data: caixa } = useCaixaAtiva();
+
   const { data: folhas = [], isLoading } = useQuery({
-    queryKey: ["folhas-guias"],
+    queryKey: ["folhas-guias", activeCaixaId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("folhas_pagamento")
         .select("*")
+        .eq("caixa_id", activeCaixaId!)
         .order("mes_referencia", { ascending: false });
       if (error) throw error;
       return data;
     },
-  });
-
-  const { data: caixaNome } = useQuery({
-    queryKey: ["caixa-nome-guias"],
-    queryFn: async () => {
-      const { data } = await supabase.from("caixas_previdencia").select("nome").limit(1).maybeSingle();
-      return data?.nome ?? null;
-    },
+    enabled: !!activeCaixaId,
   });
 
   const meses = useMemo(() => {
@@ -50,13 +47,14 @@ export default function GuiasPDF() {
     new Date(mes + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   const handleVisualizar = (folha: (typeof folhas)[0]) => {
-    previewGuia(folha, caixaNome ?? undefined);
+    previewGuia(folha, caixa ?? undefined);
   };
 
   const handleBaixar = (folha: (typeof folhas)[0]) => {
-    downloadGuia(folha, caixaNome ?? undefined);
+    downloadGuia(folha, caixa ?? undefined);
     toast({ title: "Guia gerada!", description: `${folha.centro_custo} - ${formatMes(folha.mes_referencia)}` });
   };
+
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-20 text-muted-foreground">Carregando...</div>;
