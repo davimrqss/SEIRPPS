@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { downloadGuia, previewGuia } from "@/lib/guiaPdf";
 import { fmtBRL } from "@/lib/format";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCaixaAtiva } from "@/hooks/useCaixa";
+
 
 export default function GuiasPDF() {
   const { toast } = useToast();
