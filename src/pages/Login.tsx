@@ -12,11 +12,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 export default function Login() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [nome, setNome] = useState("");
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -28,31 +26,16 @@ export default function Login() {
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
-      }
-    } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nome }, emailRedirectTo: window.location.origin },
-      });
-      if (error) {
-        toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Conta criada!", description: "Verifique seu e-mail para confirmar." });
-      }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
     }
     setLoading(false);
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background p-4">

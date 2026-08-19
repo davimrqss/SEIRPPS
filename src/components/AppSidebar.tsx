@@ -2,16 +2,16 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
-  
   Users,
   FileDown,
   LogOut,
   Settings,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
+import { CaixaSwitcher } from "./CaixaSwitcher";
 import logo from "@/assets/logo.png";
 
 const navItems = [
@@ -24,26 +24,9 @@ const navItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { profile, user, signOut } = useAuth();
-
-  const { data: caixa } = useQuery({
-    queryKey: ["minha-caixa"],
-    queryFn: async () => {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("caixa_id")
-        .eq("user_id", user!.id)
-        .single();
-      if (!prof?.caixa_id) return null;
-      const { data } = await supabase
-        .from("caixas_previdencia")
-        .select("nome")
-        .eq("id", prof.caixa_id)
-        .single();
-      return data;
-    },
-    enabled: !!user,
-  });
+  const { profile, signOut } = useAuth();
+  const { data: caixa } = useCaixaAtiva();
+  const { data: caixaLogo } = useLogoUrl(caixa?.logo_url);
 
   const systemName = caixa?.nome || "PrevSys";
 
@@ -51,14 +34,28 @@ export function AppSidebar() {
     <aside className="w-64 min-h-screen bg-sidebar text-sidebar-foreground flex flex-col">
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Logo" className="h-10 w-10 object-contain rounded" />
-          <div>
-            <h1 className="text-lg font-bold text-sidebar-primary-foreground leading-tight">
+          {caixaLogo ? (
+            <img
+              src={caixaLogo}
+              alt={`Logo ${systemName}`}
+              className="h-10 w-10 object-contain rounded bg-sidebar-accent/30"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded bg-sidebar-accent/40 flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-sidebar-accent-foreground" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-sidebar-primary-foreground leading-tight truncate">
               {systemName}
             </h1>
             <p className="text-xs text-sidebar-muted">Caixa de Previdência</p>
           </div>
         </div>
+      </div>
+
+      <div className="pt-3">
+        <CaixaSwitcher />
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
