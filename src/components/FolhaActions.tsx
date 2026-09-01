@@ -41,12 +41,19 @@ export function FolhaActions({ folha }: { folha: Folha }) {
 
   const initial = () => ({
     centro_custo: folha.centro_custo,
+    codigo_centro_custo: folha.codigo_centro_custo ?? "",
     orgao: folha.orgao,
+    num_empregados: String(folha.num_empregados ?? 0),
+    grupo_folha: folha.grupo_folha ?? "1 - Normal",
     vencimento: folha.vencimento,
     remuneracao: currencyToInput(folha.remuneracao),
     base_calculo: currencyToInput(folha.base_calculo),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
+    salario_maternidade: currencyToInput(folha.salario_maternidade),
+    salario_familia: currencyToInput(folha.salario_familia),
+    aux_doenca: currencyToInput(folha.aux_doenca),
+    juros_multa: currencyToInput(folha.juros_multa),
     is_13: folha.is_13,
     tipo: folha.tipo,
     paga: folha.paga,
@@ -83,7 +90,10 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       .from("folhas_pagamento")
       .update({
         centro_custo: form.centro_custo,
+        codigo_centro_custo: form.codigo_centro_custo || null,
         orgao: form.orgao,
+        num_empregados: parseInt(form.num_empregados) || 0,
+        grupo_folha: form.grupo_folha,
         mes_referencia: form.vencimento.slice(0, 7),
         vencimento: form.vencimento,
         remuneracao: parseCurrency(form.remuneracao),
@@ -92,6 +102,10 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         valor_patronal: base * (aliqPat / 100),
         aliquota_servidor: aliqServ,
         aliquota_patronal: aliqPat,
+        salario_maternidade: parseCurrency(form.salario_maternidade),
+        salario_familia: parseCurrency(form.salario_familia),
+        aux_doenca: parseCurrency(form.aux_doenca),
+        juros_multa: parseCurrency(form.juros_multa),
         is_13: form.is_13,
         tipo: form.tipo,
         paga: form.paga,
@@ -241,6 +255,38 @@ export function FolhaActions({ folha }: { folha: Folha }) {
               <div className="space-y-2">
                 <Label htmlFor="e-base">Base de Cálculo (R$)</Label>
                 <CurrencyInput id="e-base" value={form.base_calculo} onValueChange={(v) => change("base_calculo", v)} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-cod">Código do Centro de Custo</Label>
+                <Input id="e-cod" value={form.codigo_centro_custo} onChange={(e) => change("codigo_centro_custo", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-emp">Nº de Empregados</Label>
+                <Input id="e-emp" type="number" min="0" value={form.num_empregados} onChange={(e) => change("num_empregados", e.target.value)} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="e-grupo">Grupo Folha</Label>
+                <Input id="e-grupo" value={form.grupo_folha} onChange={(e) => change("grupo_folha", e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-matern">Salário Maternidade (R$)</Label>
+                <CurrencyInput id="e-matern" value={form.salario_maternidade} onValueChange={(v) => change("salario_maternidade", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-familia">Salário Família (R$)</Label>
+                <CurrencyInput id="e-familia" value={form.salario_familia} onValueChange={(v) => change("salario_familia", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-doenca">Auxílio Doença (R$)</Label>
+                <CurrencyInput id="e-doenca" value={form.aux_doenca} onValueChange={(v) => change("aux_doenca", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-juros">Juros / Multa (R$)</Label>
+                <CurrencyInput id="e-juros" value={form.juros_multa} onValueChange={(v) => change("juros_multa", v)} />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -95,6 +95,11 @@ export function AppSidebar() {
           <LogOut className="h-5 w-5" />
           Sair
         </button>
+
+        <div className="flex items-center gap-2 px-3 pt-3 border-t border-sidebar-border/60">
+          <img src={logo} alt="PrevSys" className="h-5 w-5 object-contain opacity-80" />
+          <span className="text-[11px] text-sidebar-muted">PrevSys</span>
+        </div>
       </div>
     </aside>
   );
