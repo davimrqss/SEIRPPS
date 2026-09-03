@@ -74,6 +74,54 @@ export type Database = {
         }
         Relationships: []
       }
+      centros_custo: {
+        Row: {
+          caixa_id: string
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          orgao_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          caixa_id: string
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          orgao_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          caixa_id?: string
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          orgao_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centros_custo_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas_previdencia"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centros_custo_orgao_id_fkey"
+            columns: ["orgao_id"]
+            isOneToOne: false
+            referencedRelation: "orgaos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folhas_pagamento: {
         Row: {
           aliquota_patronal: number
@@ -216,6 +264,59 @@ export type Database = {
           },
         ]
       }
+      orgaos: {
+        Row: {
+          caixa_id: string
+          cep: string | null
+          cnpj: string | null
+          created_at: string
+          email: string | null
+          endereco: string | null
+          id: string
+          municipio: string | null
+          nome: string
+          telefone: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          caixa_id: string
+          cep?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          municipio?: string | null
+          nome: string
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          caixa_id?: string
+          cep?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          municipio?: string | null
+          nome?: string
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orgaos_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas_previdencia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagamentos: {
         Row: {
           created_at: string
@@ -259,6 +360,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           caixa_id: string | null
           cargo: string | null
           cpf: string | null
@@ -269,6 +371,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           caixa_id?: string | null
           cargo?: string | null
           cpf?: string | null
@@ -279,6 +382,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           caixa_id?: string | null
           cargo?: string | null
           cpf?: string | null
@@ -297,6 +401,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      solicitacoes_conta: {
+        Row: {
+          created_at: string
+          id: string
+          mensagem: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor_solicitado: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mensagem?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor_solicitado?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mensagem?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor_solicitado?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -331,7 +468,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "gestor_financeiro" | "operador"
+      app_role: "admin" | "gestor_financeiro" | "operador" | "fiscal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -459,7 +596,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gestor_financeiro", "operador"],
+      app_role: ["admin", "gestor_financeiro", "operador", "fiscal"],
     },
   },
 } as const
