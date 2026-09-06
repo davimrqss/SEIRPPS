@@ -100,7 +100,7 @@ export default function NovaFolha() {
       juros_multa: parseCurrency(form.jurosMulta),
       aliquota_servidor: aliqServ,
       aliquota_patronal: aliqPat,
-      is_13: form.is13,
+      is_13: form.grupoFolha.includes("13"),
       tipo: form.tipo,
       caixa_id: activeCaixaId,
     });
