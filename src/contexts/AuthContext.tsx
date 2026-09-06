@@ -7,7 +7,7 @@ type AppRole = "admin" | "gestor_financeiro" | "operador" | "fiscal";
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: { nome: string; caixa_id: string | null; cargo: string | null } | null;
+  profile: { nome: string; caixa_id: string | null; cargo: string | null; avatar_url: string | null } | null;
   roles: AppRole[];
   loading: boolean;
   signOut: () => Promise<void>;
