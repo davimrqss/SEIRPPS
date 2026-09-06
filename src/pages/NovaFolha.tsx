@@ -37,11 +37,11 @@ export default function NovaFolha() {
     aliquotaServidor: "11",
     aliquotaPatronal: "22",
     aliquotaSuplementar: "0",
+    usaSuplementar: "nao",
     salarioMaternidade: "",
     salarioFamilia: "",
     auxDoenca: "",
     jurosMulta: "",
-    is13: false,
     tipo: "servidor",
   });
 
