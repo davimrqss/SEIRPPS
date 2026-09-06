@@ -204,8 +204,14 @@ export default function NovaFolha() {
                 <Input id="aliqPat" type="number" step="0.01" value={form.aliquotaPatronal} onChange={(e) => handleChange("aliquotaPatronal", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="aliqSup">Alíquota Suplementar (%)</Label>
-                <Input id="aliqSup" type="number" step="0.01" value={form.aliquotaSuplementar} onChange={(e) => handleChange("aliquotaSuplementar", e.target.value)} />
+                <Label htmlFor="usaSup">Alíquota Suplementar</Label>
+                <Select value={form.usaSuplementar} onValueChange={(v) => handleChange("usaSuplementar", v)}>
+                  <SelectTrigger id="usaSup"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim ({form.aliquotaSuplementar}%)</SelectItem>
+                    <SelectItem value="nao">Não</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
