@@ -106,7 +106,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         salario_familia: parseCurrency(form.salario_familia),
         aux_doenca: parseCurrency(form.aux_doenca),
         juros_multa: parseCurrency(form.juros_multa),
-        is_13: form.is_13,
+        is_13: form.grupo_folha.includes("13"),
         tipo: form.tipo,
         paga: form.paga,
       })
@@ -242,10 +242,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end gap-3 pb-1">
-                <Switch id="e-is13" checked={form.is_13} onCheckedChange={(v) => change("is_13", v)} />
-                <Label htmlFor="e-is13">13° Salário</Label>
-              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -263,12 +259,18 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 <Input id="e-cod" value={form.codigo_centro_custo} onChange={(e) => change("codigo_centro_custo", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="e-emp">Nº de Empregados</Label>
+                <Label htmlFor="e-emp">Nº de Servidores</Label>
                 <Input id="e-emp" type="number" min="0" value={form.num_empregados} onChange={(e) => change("num_empregados", e.target.value)} />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="e-grupo">Grupo Folha</Label>
-                <Input id="e-grupo" value={form.grupo_folha} onChange={(e) => change("grupo_folha", e.target.value)} />
+                <Select value={form.grupo_folha} onValueChange={(v) => change("grupo_folha", v)}>
+                  <SelectTrigger id="e-grupo"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 - Normal">1 - Normal</SelectItem>
+                    <SelectItem value="2 - 13° Salário">2 - 13° Salário</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
