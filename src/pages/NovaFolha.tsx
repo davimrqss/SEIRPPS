@@ -62,7 +62,7 @@ export default function NovaFolha() {
   const baseCalc = parseCurrency(form.baseCalculo);
   const aliqServ = parseFloat(form.aliquotaServidor) || 0;
   const aliqPat = parseFloat(form.aliquotaPatronal) || 0;
-  const aliqSup = parseFloat(form.aliquotaSuplementar) || 0;
+  const aliqSup = form.usaSuplementar === "sim" ? parseFloat(form.aliquotaSuplementar) || 0 : 0;
   const valorServidor = baseCalc * (aliqServ / 100);
   const valorPatronal = baseCalc * (aliqPat / 100);
   const valorSuplementar = baseCalc * (aliqSup / 100);
