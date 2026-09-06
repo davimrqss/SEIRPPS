@@ -14,7 +14,11 @@ import NovaFolha from "./pages/NovaFolha";
 import LancarPagamento from "./pages/LancarPagamento";
 import GuiasPDF from "./pages/GuiasPDF";
 import Cadastro from "./pages/Cadastro";
-import Configuracoes from "./pages/Configuracoes";
+import Caixas from "./pages/Caixas";
+import CaixaEditar from "./pages/CaixaEditar";
+import Orgaos from "./pages/Orgaos";
+import CentrosCusto from "./pages/CentrosCusto";
+import MinhaConta from "./pages/MinhaConta";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -43,8 +47,12 @@ const App = () => (
               <Route path="/folhas/nova" element={<NovaFolha />} />
               <Route path="/guias" element={<GuiasPDF />} />
               <Route path="/guias/:folhaId/pagamento" element={<LancarPagamento />} />
+              <Route path="/caixas" element={<Caixas />} />
+              <Route path="/caixas/:id" element={<CaixaEditar />} />
+              <Route path="/orgaos" element={<Orgaos />} />
+              <Route path="/centros-custo" element={<CentrosCusto />} />
               <Route path="/cadastro" element={<Cadastro />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/minha-conta" element={<MinhaConta />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

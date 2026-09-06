@@ -7,7 +7,7 @@ type AppRole = "admin" | "gestor_financeiro" | "operador" | "fiscal";
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: { nome: string; caixa_id: string | null; cargo: string | null } | null;
+  profile: { nome: string; caixa_id: string | null; cargo: string | null; avatar_url: string | null } | null;
   roles: AppRole[];
   loading: boolean;
   signOut: () => Promise<void>;
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfileAndRoles = async (userId: string) => {
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("nome, caixa_id, cargo")
+      .select("nome, caixa_id, cargo, avatar_url")
       .eq("user_id", userId)
       .single();
     setProfile(profileData);

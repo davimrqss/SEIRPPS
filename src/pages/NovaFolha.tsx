@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -37,11 +36,11 @@ export default function NovaFolha() {
     aliquotaServidor: "11",
     aliquotaPatronal: "22",
     aliquotaSuplementar: "0",
+    usaSuplementar: "nao",
     salarioMaternidade: "",
     salarioFamilia: "",
     auxDoenca: "",
     jurosMulta: "",
-    is13: false,
     tipo: "servidor",
   });
 
@@ -62,7 +61,7 @@ export default function NovaFolha() {
   const baseCalc = parseCurrency(form.baseCalculo);
   const aliqServ = parseFloat(form.aliquotaServidor) || 0;
   const aliqPat = parseFloat(form.aliquotaPatronal) || 0;
-  const aliqSup = parseFloat(form.aliquotaSuplementar) || 0;
+  const aliqSup = form.usaSuplementar === "sim" ? parseFloat(form.aliquotaSuplementar) || 0 : 0;
   const valorServidor = baseCalc * (aliqServ / 100);
   const valorPatronal = baseCalc * (aliqPat / 100);
   const valorSuplementar = baseCalc * (aliqSup / 100);
@@ -100,7 +99,7 @@ export default function NovaFolha() {
       juros_multa: parseCurrency(form.jurosMulta),
       aliquota_servidor: aliqServ,
       aliquota_patronal: aliqPat,
-      is_13: form.is13,
+      is_13: form.grupoFolha.includes("13"),
       tipo: form.tipo,
       caixa_id: activeCaixaId,
     });
@@ -152,12 +151,18 @@ export default function NovaFolha() {
                 <DateField id="vencimento" value={form.vencimento} onChange={(v) => handleChange("vencimento", v)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="numEmpregados">Nº de Empregados</Label>
+                <Label htmlFor="numEmpregados">Nº de Servidores</Label>
                 <Input id="numEmpregados" type="number" min="0" value={form.numEmpregados} onChange={(e) => handleChange("numEmpregados", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="grupoFolha">Grupo Folha</Label>
-                <Input id="grupoFolha" value={form.grupoFolha} onChange={(e) => handleChange("grupoFolha", e.target.value)} />
+                <Select value={form.grupoFolha} onValueChange={(v) => handleChange("grupoFolha", v)}>
+                  <SelectTrigger id="grupoFolha"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 - Normal">1 - Normal</SelectItem>
+                    <SelectItem value="2 - 13° Salário">2 - 13° Salário</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -170,10 +175,6 @@ export default function NovaFolha() {
                     <SelectItem value="patronal">Patronal</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex items-end gap-3 pb-1">
-                <Switch id="is13" checked={form.is13} onCheckedChange={(v) => handleChange("is13", v)} />
-                <Label htmlFor="is13">13° Salário</Label>
               </div>
             </div>
           </CardContent>
@@ -202,8 +203,14 @@ export default function NovaFolha() {
                 <Input id="aliqPat" type="number" step="0.01" value={form.aliquotaPatronal} onChange={(e) => handleChange("aliquotaPatronal", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="aliqSup">Alíquota Suplementar (%)</Label>
-                <Input id="aliqSup" type="number" step="0.01" value={form.aliquotaSuplementar} onChange={(e) => handleChange("aliquotaSuplementar", e.target.value)} />
+                <Label htmlFor="usaSup">Alíquota Suplementar</Label>
+                <Select value={form.usaSuplementar} onValueChange={(v) => handleChange("usaSuplementar", v)}>
+                  <SelectTrigger id="usaSup"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim ({form.aliquotaSuplementar}%)</SelectItem>
+                    <SelectItem value="nao">Não</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -7,7 +7,7 @@ const BodySchema = z.object({
   password: z.string().min(8).max(72),
   nome: z.string().min(1).max(200),
   caixa_id: z.string().uuid(),
-  role: z.enum(["admin", "gestor_financeiro", "operador"]),
+  role: z.enum(["admin", "gestor_financeiro", "operador", "fiscal"]),
   cargo: z.string().max(200).optional(),
 });
 
