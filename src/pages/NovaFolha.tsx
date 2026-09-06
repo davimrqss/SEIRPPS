@@ -152,12 +152,18 @@ export default function NovaFolha() {
                 <DateField id="vencimento" value={form.vencimento} onChange={(v) => handleChange("vencimento", v)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="numEmpregados">Nº de Empregados</Label>
+                <Label htmlFor="numEmpregados">Nº de Servidores</Label>
                 <Input id="numEmpregados" type="number" min="0" value={form.numEmpregados} onChange={(e) => handleChange("numEmpregados", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="grupoFolha">Grupo Folha</Label>
-                <Input id="grupoFolha" value={form.grupoFolha} onChange={(e) => handleChange("grupoFolha", e.target.value)} />
+                <Select value={form.grupoFolha} onValueChange={(v) => handleChange("grupoFolha", v)}>
+                  <SelectTrigger id="grupoFolha"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 - Normal">1 - Normal</SelectItem>
+                    <SelectItem value="2 - 13° Salário">2 - 13° Salário</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -170,10 +176,6 @@ export default function NovaFolha() {
                     <SelectItem value="patronal">Patronal</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex items-end gap-3 pb-1">
-                <Switch id="is13" checked={form.is13} onCheckedChange={(v) => handleChange("is13", v)} />
-                <Label htmlFor="is13">13° Salário</Label>
               </div>
             </div>
           </CardContent>
