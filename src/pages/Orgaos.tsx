@@ -187,7 +187,7 @@ export default function Orgaos() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Editar Órgão" : "Novo Órgão"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSave} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">

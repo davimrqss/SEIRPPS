@@ -167,7 +167,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
 
       {/* Visualizar */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Folha</DialogTitle>
             <DialogDescription>{folha.centro_custo} — {formatMes(folha.mes_referencia)}</DialogDescription>
