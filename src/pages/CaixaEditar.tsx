@@ -12,7 +12,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
 export default function CaixaEditar() {
-  const { caixaId } = useParams<{ caixaId: string }>();
+  const { id: caixaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canEditCaixasEOrgaos } = usePermissions();
@@ -190,7 +190,7 @@ export default function CaixaEditar() {
         </CardHeader>
         <CardContent className="flex items-center gap-6">
           {logoUrl ? (
-            <img src={`Logo ${caixa.nome}` && logoUrl} alt={`Logo ${caixa.nome}`} className="h-20 w-20 object-contain rounded border border-border" />
+            <img src={logoUrl} alt={`Logo ${caixa.nome}`} className="h-20 w-20 object-contain rounded border border-border" />
           ) : (
             <div className="h-20 w-20 rounded border border-dashed border-border flex items-center justify-center">
               <Building2 className="h-7 w-7 text-muted-foreground" />
