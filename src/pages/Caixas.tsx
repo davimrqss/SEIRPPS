@@ -19,6 +19,8 @@ export default function Caixas() {
   const queryClient = useQueryClient();
   const [busca, setBusca] = useState("");
   const [criando, setCriando] = useState(false);
+  const [removendo, setRemovendo] = useState<{ id: string; nome: string } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   const { data: caixas = [], isLoading } = useQuery({
     queryKey: ["caixas-lista"],
