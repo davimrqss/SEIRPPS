@@ -26,7 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import logo from "@/assets/logo.png";
 
-export function AppSidebar() {
+export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
