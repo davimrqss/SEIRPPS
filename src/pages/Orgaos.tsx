@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useOrgaos } from "@/hooks/useCadastros";
+import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -30,6 +31,7 @@ export default function Orgaos() {
   const { canEditCaixasEOrgaos } = usePermissions();
   const queryClient = useQueryClient();
   const { data: orgaos = [], isLoading } = useOrgaos();
+  const { data: caixa } = useCaixaAtiva();
 
   const [busca, setBusca] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,7 +113,9 @@ export default function Orgaos() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Órgãos</h1>
-          <p className="text-muted-foreground mt-1">Órgãos vinculados à caixa de previdência</p>
+          <p className="text-muted-foreground mt-1">
+            Órgãos de {caixa?.nome ?? "sua caixa de previdência"}
+          </p>
         </div>
         {canEditCaixasEOrgaos && (
           <Button onClick={openNovo}><Plus className="h-4 w-4 mr-2" />Novo Órgão</Button>
