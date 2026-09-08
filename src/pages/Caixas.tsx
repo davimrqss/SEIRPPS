@@ -158,12 +158,25 @@ export default function Caixas() {
                         {c.municipio ? `${c.municipio}${c.uf ? " / " + c.uf : ""}` : "-"}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button asChild variant="ghost" size="sm">
-                          <Link to={`/caixas/${c.id}`}>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            {canEditCaixasEOrgaos ? "Editar" : "Visualizar"}
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button asChild variant="ghost" size="sm">
+                            <Link to={`/caixas/${c.id}`}>
+                              <Pencil className="h-4 w-4 mr-1" />
+                              {canEditCaixasEOrgaos ? "Editar" : "Visualizar"}
+                            </Link>
+                          </Button>
+                          {canEditCaixasEOrgaos && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Excluir caixa"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setRemovendo({ id: c.id, nome: c.nome })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
