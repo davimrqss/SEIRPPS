@@ -26,7 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import logo from "@/assets/logo.png";
 
-export function AppSidebar() {
+export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
@@ -55,8 +55,15 @@ export function AppSidebar() {
     .toUpperCase();
 
   return (
-    <aside className="group w-64 hover:w-80 transition-[width] duration-300 ease-out min-h-screen bg-sidebar text-sidebar-foreground flex flex-col shrink-0">
-      <div className="p-6 border-b border-sidebar-border">
+    <aside
+      className={cn(
+        "group bg-sidebar text-sidebar-foreground flex flex-col shrink-0",
+        mobile
+          ? "w-full h-full overflow-y-auto"
+          : "w-64 hover:w-80 transition-[width] duration-300 ease-out min-h-screen"
+      )}
+    >
+      <div className="p-5 md:p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           {caixaLogo ? (
             <img

@@ -65,7 +65,7 @@ export default function GuiasPDF() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Guias PDF</h1>
           <p className="text-muted-foreground mt-1">Gere guias em PDF para cada folha de pagamento</p>
@@ -74,10 +74,10 @@ export default function GuiasPDF() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base">Filtrar por Mês</CardTitle>
             <Select value={filtroMes} onValueChange={setFiltroMes}>
-              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Todos os meses" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[220px]"><SelectValue placeholder="Todos os meses" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os meses</SelectItem>
                 {meses.map((m) => (<SelectItem key={m} value={m}>{formatMes(m)}</SelectItem>))}
