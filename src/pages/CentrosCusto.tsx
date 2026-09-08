@@ -101,7 +101,7 @@ export default function CentrosCusto() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Centros de Custo</h1>
           <p className="text-muted-foreground mt-1">Códigos usados nas folhas de pagamento</p>
