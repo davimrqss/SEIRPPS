@@ -51,6 +51,44 @@ export default function Caixas() {
     navigate(`/caixas/${data.id}`);
   };
 
+  const excluirCaixa = async () => {
+    if (!removendo) return;
+    setExcluindo(true);
+    const id = removendo.id;
+    try {
+      const { data: folhas } = await supabase
+        .from("folhas_pagamento")
+        .select("id")
+        .eq("caixa_id", id);
+      const folhaIds = (folhas ?? []).map((f) => f.id);
+      if (folhaIds.length) {
+        const { error } = await supabase.from("pagamentos").delete().in("folha_id", folhaIds);
+        if (error) throw error;
+      }
+      for (const tabela of ["folhas_pagamento", "centros_custo", "orgaos", "funcionarios"] as const) {
+        const { error } = await supabase.from(tabela).delete().eq("caixa_id", id);
+        if (error) throw error;
+      }
+      const { error: profErr } = await supabase
+        .from("profiles")
+        .update({ caixa_id: null })
+        .eq("caixa_id", id);
+      if (profErr) throw profErr;
+      const { error } = await supabase.from("caixas_previdencia").delete().eq("id", id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["caixas-lista"] });
+      queryClient.invalidateQueries({ queryKey: ["caixas"] });
+      queryClient.invalidateQueries({ queryKey: ["caixa"] });
+      setRemovendo(null);
+      toast.success("Caixa de previdência excluída.");
+    } catch (err) {
+      toast.error("Erro ao excluir: " + (err as Error).message);
+    } finally {
+      setExcluindo(false);
+    }
+  };
+
   const filtradas = caixas.filter((c) =>
     [c.nome, c.empresa, c.cnpj, c.municipio].some((v) =>
       (v ?? "").toLowerCase().includes(busca.toLowerCase())
