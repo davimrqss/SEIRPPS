@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { downloadGuia, previewGuia } from "@/lib/guiaPdf";
 import { fmtBRL } from "@/lib/format";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCaixaAtiva } from "@/hooks/useCaixa";
+import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
 
 
 export default function GuiasPDF() {
@@ -21,6 +21,7 @@ export default function GuiasPDF() {
 
   const { activeCaixaId } = useAuth();
   const { data: caixa } = useCaixaAtiva();
+  const { data: logoUrl } = useLogoUrl(caixa?.logo_url);
 
   const { data: folhas = [], isLoading } = useQuery({
     queryKey: ["folhas-guias", activeCaixaId],
@@ -50,11 +51,11 @@ export default function GuiasPDF() {
     new Date(mes + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   const handleVisualizar = (folha: (typeof folhas)[0]) => {
-    previewGuia(folha, caixa ?? undefined);
+    previewGuia(folha, caixa ?? undefined, logoUrl);
   };
 
   const handleBaixar = (folha: (typeof folhas)[0]) => {
-    downloadGuia(folha, caixa ?? undefined);
+    downloadGuia(folha, caixa ?? undefined, logoUrl);
     toast({ title: "Guia gerada!", description: `${folha.centro_custo} - ${formatMes(folha.mes_referencia)}` });
   };
 

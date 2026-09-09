@@ -21,6 +21,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
 import { currencyToInput, parseCurrency } from "@/lib/format";
+import { useCentrosCusto } from "@/hooks/useCadastros";
+import type { CentroOpt } from "@/pages/NovaFolha";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Folha = Tables<"folhas_pagamento">;
@@ -60,10 +62,26 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   });
 
   const [form, setForm] = useState(initial);
+  const { data: centros = [] } = useCentrosCusto();
+  const [centroValue, setCentroValue] = useState("");
 
   const openEdit = () => {
     setForm(initial());
+    const atual = (centros as CentroOpt[]).find((c) => c.nome === folha.centro_custo);
+    setCentroValue(atual?.id ?? "");
     setEditOpen(true);
+  };
+
+  const selecionarCentro = (id: string) => {
+    setCentroValue(id);
+    const c = (centros as CentroOpt[]).find((x) => x.id === id);
+    if (!c) return;
+    setForm((prev) => ({
+      ...prev,
+      centro_custo: c.nome,
+      codigo_centro_custo: c.codigo ?? "",
+      orgao: c.orgaos?.nome ?? prev.orgao,
+    }));
   };
 
   const change = (field: string, value: string | boolean) =>
@@ -217,15 +235,20 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <DialogDescription>Atualize os dados da folha de pagamento</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="e-centro">Centro de Custo</Label>
-                <Input id="e-centro" value={form.centro_custo} onChange={(e) => change("centro_custo", e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="e-orgao">Órgão</Label>
-                <Input id="e-orgao" value={form.orgao} onChange={(e) => change("orgao", e.target.value)} required />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="e-centro">Centro de Custo</Label>
+              <Select value={centroValue || undefined} onValueChange={selecionarCentro}>
+                <SelectTrigger id="e-centro">
+                  <SelectValue placeholder={form.centro_custo || "Selecionar centro de custo"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(centros as CentroOpt[]).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.codigo} - {c.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -254,10 +277,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="e-cod">Código do Centro de Custo</Label>
-                <Input id="e-cod" value={form.codigo_centro_custo} onChange={(e) => change("codigo_centro_custo", e.target.value)} />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="e-emp">Nº de Servidores</Label>
                 <Input id="e-emp" type="number" min="0" value={form.num_empregados} onChange={(e) => change("num_empregados", e.target.value)} />
