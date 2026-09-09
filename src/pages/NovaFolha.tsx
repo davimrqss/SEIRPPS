@@ -16,6 +16,14 @@ import { useNavigate } from "react-router-dom";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
 import { fmtBRL, parseCurrency } from "@/lib/format";
+import { useCentrosCusto } from "@/hooks/useCadastros";
+
+export type CentroOpt = {
+  id: string;
+  nome: string;
+  codigo: string | null;
+  orgaos?: { nome: string } | null;
+};
 
 export default function NovaFolha() {
   const { toast } = useToast();
@@ -57,6 +65,18 @@ export default function NovaFolha() {
 
   const handleChange = (field: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const selecionarCentro = (id: string) => {
+    setCentroId(id);
+    const c = (centros as CentroOpt[]).find((x) => x.id === id);
+    if (!c) return;
+    setForm((prev) => ({
+      ...prev,
+      centroCusto: c.nome,
+      codigoCentroCusto: c.codigo ?? "",
+      orgao: c.orgaos?.nome ?? prev.orgao,
+    }));
+  };
 
   const baseCalc = parseCurrency(form.baseCalculo);
   const aliqServ = parseFloat(form.aliquotaServidor) || 0;
@@ -132,17 +152,20 @@ export default function NovaFolha() {
           <CardHeader><CardTitle className="text-base">Dados da Folha</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="codigoCentroCusto">Código Centro de Custo</Label>
-                <Input id="codigoCentroCusto" placeholder="Ex: 001" value={form.codigoCentroCusto} onChange={(e) => handleChange("codigoCentroCusto", e.target.value)} />
-              </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="centroCusto">Centro de Custo</Label>
-                <Input id="centroCusto" placeholder="Ex: Secretaria de Educação" value={form.centroCusto} onChange={(e) => handleChange("centroCusto", e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="orgao">Órgão</Label>
-                <Input id="orgao" placeholder="Ex: Prefeitura Municipal" value={form.orgao} onChange={(e) => handleChange("orgao", e.target.value)} required />
+                <Select value={centroId || undefined} onValueChange={selecionarCentro}>
+                  <SelectTrigger id="centroCusto">
+                    <SelectValue placeholder={centros.length ? "Selecionar centro de custo" : "Nenhum centro de custo cadastrado"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(centros as CentroOpt[]).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.codigo} - {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
