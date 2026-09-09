@@ -21,6 +21,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
 import { currencyToInput, parseCurrency } from "@/lib/format";
+import { useCentrosCusto } from "@/hooks/useCadastros";
+import type { CentroOpt } from "@/pages/NovaFolha";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Folha = Tables<"folhas_pagamento">;
@@ -60,10 +62,26 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   });
 
   const [form, setForm] = useState(initial);
+  const { data: centros = [] } = useCentrosCusto();
+  const [centroValue, setCentroValue] = useState("");
 
   const openEdit = () => {
     setForm(initial());
+    const atual = (centros as CentroOpt[]).find((c) => c.nome === folha.centro_custo);
+    setCentroValue(atual?.id ?? "");
     setEditOpen(true);
+  };
+
+  const selecionarCentro = (id: string) => {
+    setCentroValue(id);
+    const c = (centros as CentroOpt[]).find((x) => x.id === id);
+    if (!c) return;
+    setForm((prev) => ({
+      ...prev,
+      centro_custo: c.nome,
+      codigo_centro_custo: c.codigo ?? "",
+      orgao: c.orgaos?.nome ?? prev.orgao,
+    }));
   };
 
   const change = (field: string, value: string | boolean) =>
