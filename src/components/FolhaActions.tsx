@@ -217,15 +217,20 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <DialogDescription>Atualize os dados da folha de pagamento</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="e-centro">Centro de Custo</Label>
-                <Input id="e-centro" value={form.centro_custo} onChange={(e) => change("centro_custo", e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="e-orgao">Órgão</Label>
-                <Input id="e-orgao" value={form.orgao} onChange={(e) => change("orgao", e.target.value)} required />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="e-centro">Centro de Custo</Label>
+              <Select value={centroValue || undefined} onValueChange={selecionarCentro}>
+                <SelectTrigger id="e-centro">
+                  <SelectValue placeholder={form.centro_custo || "Selecionar centro de custo"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(centros as CentroOpt[]).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.codigo} - {c.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
