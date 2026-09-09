@@ -94,6 +94,10 @@ export default function NovaFolha() {
       toast({ title: "Erro", description: "Selecione uma caixa de previdência.", variant: "destructive" });
       return;
     }
+    if (!form.centroCusto) {
+      toast({ title: "Centro de custo", description: "Selecione um centro de custo.", variant: "destructive" });
+      return;
+    }
     if (!form.vencimento) {
       toast({ title: "Data inválida", description: "Informe o vencimento no formato dd-mm-aaaa.", variant: "destructive" });
       return;
