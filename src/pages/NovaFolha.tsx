@@ -32,6 +32,8 @@ export default function NovaFolha() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { data: centros = [] } = useCentrosCusto();
+  const [centroId, setCentroId] = useState("");
   const [form, setForm] = useState({
     centroCusto: "",
     codigoCentroCusto: "",
