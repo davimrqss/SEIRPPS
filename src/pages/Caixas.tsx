@@ -186,6 +186,28 @@ export default function Caixas() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!removendo} onOpenChange={(o) => !o && setRemovendo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta caixa de previdência?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{removendo?.nome}</strong> será removida junto com suas folhas, pagamentos,
+              centros de custo, órgãos e funcionários. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); excluirCaixa(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={excluindo}
+            >
+              {excluindo ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

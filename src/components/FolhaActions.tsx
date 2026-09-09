@@ -278,10 +278,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="e-cod">Código do Centro de Custo</Label>
-                <Input id="e-cod" value={form.codigo_centro_custo} onChange={(e) => change("codigo_centro_custo", e.target.value)} />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="e-emp">Nº de Servidores</Label>
                 <Input id="e-emp" type="number" min="0" value={form.num_empregados} onChange={(e) => change("num_empregados", e.target.value)} />
               </div>
