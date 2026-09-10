@@ -153,7 +153,8 @@ export default function CaixaEditar() {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          {field("nome", "Nome *")}
+          {field("nome", "Nome (exibição no site) *")}
+          {field("razao_social", "Razão Social (usada nas guias PDF)")}
           {field("empresa", "Empresa")}
           {field("cnpj", "CNPJ")}
           {field("email", "E-mail", { type: "email" })}
