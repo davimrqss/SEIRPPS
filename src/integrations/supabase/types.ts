@@ -30,6 +30,7 @@ export type Database = {
           logo_url: string | null
           municipio: string | null
           nome: string
+          razao_social: string | null
           telefone: string | null
           uf: string | null
           updated_at: string
@@ -49,6 +50,7 @@ export type Database = {
           logo_url?: string | null
           municipio?: string | null
           nome: string
+          razao_social?: string | null
           telefone?: string | null
           uf?: string | null
           updated_at?: string
@@ -68,6 +70,7 @@ export type Database = {
           logo_url?: string | null
           municipio?: string | null
           nome?: string
+          razao_social?: string | null
           telefone?: string | null
           uf?: string | null
           updated_at?: string
