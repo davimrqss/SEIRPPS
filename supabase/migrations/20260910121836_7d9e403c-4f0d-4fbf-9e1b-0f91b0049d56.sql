@@ -1,0 +1,1 @@
+ALTER TABLE public.caixas_previdencia ADD COLUMN IF NOT EXISTS razao_social TEXT;
