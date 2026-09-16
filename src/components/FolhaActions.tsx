@@ -99,6 +99,10 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       toast({ title: "Datas obrigatórias", description: "Informe as datas de emissão e vencimento.", variant: "destructive" });
       return;
     }
+    if (form.data_emissao.slice(-2) !== "21" || form.vencimento.slice(-2) !== "20") {
+      toast({ title: "Confira as datas", description: "A emissão deve ser no dia 21 e o vencimento no dia 20.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     const base = parseCurrency(form.base_calculo);
     const aliqServ = parseFloat(form.aliquota_servidor) || 0;

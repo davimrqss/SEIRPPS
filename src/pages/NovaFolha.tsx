@@ -102,6 +102,10 @@ export default function NovaFolha() {
       toast({ title: "Datas obrigatórias", description: "Informe as datas de emissão e vencimento.", variant: "destructive" });
       return;
     }
+    if (form.dataEmissao.slice(-2) !== "21" || form.vencimento.slice(-2) !== "20") {
+      toast({ title: "Confira as datas", description: "A emissão deve ser no dia 21 e o vencimento no dia 20.", variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
     const mesReferencia = form.vencimento.slice(0, 7);
