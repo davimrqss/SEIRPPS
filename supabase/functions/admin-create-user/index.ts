@@ -35,13 +35,6 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData.user) return json({ error: "Não autenticado" }, 401);
 
-    const { data: isAdmin, error: roleErr } = await userClient.rpc("has_role", {
-      _user_id: userData.user.id,
-      _role: "admin",
-    });
-    if (roleErr) return json({ error: roleErr.message }, 500);
-    if (!isAdmin) return json({ error: "Apenas administradores podem criar contas" }, 403);
-
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) {
       return json({ error: parsed.error.flatten().fieldErrors }, 400);
@@ -49,6 +42,14 @@ Deno.serve(async (req) => {
     const { email, password, nome, caixa_id, role, cargo } = parsed.data;
 
     const admin = createClient(url, service);
+    const { data: adminRole, error: roleErr } = await admin
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", userData.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (roleErr) return json({ error: "Não foi possível validar a permissão" }, 500);
+    if (!adminRole) return json({ error: "Apenas administradores podem criar contas" }, 403);
 
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
