@@ -108,6 +108,7 @@ export default function LancarPagamento() {
           <Info label="Centro de Custo" value={folha.centro_custo} />
           <Info label="Órgão" value={folha.orgao} />
           <Info label="Mês de Referência" value={formatMes(folha.mes_referencia)} />
+          <Info label="Data de Emissão" value={folha.data_emissao ? isoToBR(folha.data_emissao) : "Não informada"} />
           <Info label="Vencimento" value={isoToBR(folha.vencimento)} />
           <Info label="Remuneração" value={fmtBRL(Number(folha.remuneracao))} />
           <Info label="Base de Cálculo" value={fmtBRL(Number(folha.base_calculo))} />
