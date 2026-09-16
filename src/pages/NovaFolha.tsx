@@ -38,6 +38,7 @@ export default function NovaFolha() {
     centroCusto: "",
     codigoCentroCusto: "",
     orgao: "",
+    dataEmissao: "",
     vencimento: "",
     numEmpregados: "",
     grupoFolha: "1 - Normal",
@@ -51,7 +52,6 @@ export default function NovaFolha() {
     salarioFamilia: "",
     auxDoenca: "",
     jurosMulta: "",
-    tipo: "servidor",
   });
 
   // Alíquotas padrão vindas da caixa ativa
@@ -98,8 +98,12 @@ export default function NovaFolha() {
       toast({ title: "Centro de custo", description: "Selecione um centro de custo.", variant: "destructive" });
       return;
     }
-    if (!form.vencimento) {
-      toast({ title: "Data inválida", description: "Informe o vencimento no formato dd-mm-aaaa.", variant: "destructive" });
+    if (!form.dataEmissao || !form.vencimento) {
+      toast({ title: "Datas obrigatórias", description: "Informe as datas de emissão e vencimento.", variant: "destructive" });
+      return;
+    }
+    if (form.dataEmissao.slice(-2) !== "21" || form.vencimento.slice(-2) !== "20") {
+      toast({ title: "Confira as datas", description: "A emissão deve ser no dia 21 e o vencimento no dia 20.", variant: "destructive" });
       return;
     }
 
@@ -111,6 +115,7 @@ export default function NovaFolha() {
       codigo_centro_custo: form.codigoCentroCusto || null,
       orgao: form.orgao,
       mes_referencia: mesReferencia,
+      data_emissao: form.dataEmissao,
       vencimento: form.vencimento,
       num_empregados: parseInt(form.numEmpregados) || 0,
       grupo_folha: form.grupoFolha,
@@ -126,7 +131,7 @@ export default function NovaFolha() {
       aliquota_servidor: aliqServ,
       aliquota_patronal: aliqPat,
       is_13: form.grupoFolha.includes("13"),
-      tipo: form.tipo,
+      tipo: "folha",
       caixa_id: activeCaixaId,
     });
 
@@ -174,11 +179,17 @@ export default function NovaFolha() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vencimento">Data de Recolhimento</Label>
+                <Label htmlFor="dataEmissao">Data de Emissão</Label>
+                <DateField id="dataEmissao" value={form.dataEmissao} onChange={(v) => handleChange("dataEmissao", v)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vencimento">Data de Vencimento</Label>
                 <DateField id="vencimento" value={form.vencimento} onChange={(v) => handleChange("vencimento", v)} required />
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="numEmpregados">Nº de Servidores</Label>
                 <Input id="numEmpregados" type="number" min="0" value={form.numEmpregados} onChange={(e) => handleChange("numEmpregados", e.target.value)} />
@@ -190,18 +201,6 @@ export default function NovaFolha() {
                   <SelectContent>
                     <SelectItem value="1 - Normal">1 - Normal</SelectItem>
                     <SelectItem value="2 - 13° Salário">2 - 13° Salário</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de Folha</Label>
-                <Select value={form.tipo} onValueChange={(v) => handleChange("tipo", v)}>
-                  <SelectTrigger id="tipo"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="servidor">Servidor</SelectItem>
-                    <SelectItem value="patronal">Patronal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

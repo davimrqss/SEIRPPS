@@ -104,10 +104,7 @@ export default function GuiasPDF() {
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <FileDown className="h-6 w-6 text-primary" />
                   </div>
-                  <div className="flex gap-1">
-                    <Badge variant={folha.tipo === "servidor" ? "default" : "secondary"} className="capitalize text-xs">{folha.tipo}</Badge>
-                    {folha.is_13 && <Badge variant="outline" className="text-xs">13°</Badge>}
-                  </div>
+                  {folha.is_13 && <Badge variant="outline" className="text-xs">13°</Badge>}
                 </div>
                 <h3 className="font-semibold text-foreground mb-1">{folha.centro_custo}</h3>
                 <p className="text-sm text-muted-foreground mb-3">{formatMes(folha.mes_referencia)}</p>

@@ -17,7 +17,6 @@ export default function FolhasPagamento() {
   const { activeCaixaId } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
-  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
 
   const { data: folhas = [], isLoading } = useQuery({
     queryKey: ["folhas", activeCaixaId],
@@ -44,10 +43,9 @@ export default function FolhasPagamento() {
       if (filtroMes !== "todos" && f.mes_referencia !== filtroMes) return false;
       if (filtroStatus === "paga" && !f.paga) return false;
       if (filtroStatus === "pendente" && f.paga) return false;
-      if (filtroTipo !== "todos" && f.tipo !== filtroTipo) return false;
       return true;
     });
-  }, [folhas, filtroMes, filtroStatus, filtroTipo]);
+  }, [folhas, filtroMes, filtroStatus]);
 
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -76,7 +74,7 @@ export default function FolhasPagamento() {
           <CardTitle className="text-base flex items-center gap-2"><Filter className="h-4 w-4" />Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">Período (Mês)</label>
               <Select value={filtroMes} onValueChange={setFiltroMes}>
@@ -98,17 +96,6 @@ export default function FolhasPagamento() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Tipo de Folha</label>
-              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="servidor">Servidor</SelectItem>
-                  <SelectItem value="patronal">Patronal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -121,7 +108,6 @@ export default function FolhasPagamento() {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Centro de Custo</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Mês Ref.</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Tipo</th>
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Remuneração</th>
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Base Cálculo</th>
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Servidor</th>
@@ -133,7 +119,7 @@ export default function FolhasPagamento() {
               <tbody>
                 {folhasFiltradas.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
                       <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       Nenhuma folha encontrada
                     </td>
@@ -146,9 +132,6 @@ export default function FolhasPagamento() {
                         {folha.is_13 && <Badge variant="outline" className="ml-2 text-xs">13°</Badge>}
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">{formatMes(folha.mes_referencia)}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={folha.tipo === "servidor" ? "default" : "secondary"} className="capitalize">{folha.tipo}</Badge>
-                      </td>
                       <td className="py-3 px-4 text-right text-foreground">{fmt(Number(folha.remuneracao))}</td>
                       <td className="py-3 px-4 text-right text-foreground">{fmt(Number(folha.base_calculo))}</td>
                       <td className="py-3 px-4 text-right text-foreground">

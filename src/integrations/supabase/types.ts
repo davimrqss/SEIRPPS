@@ -135,6 +135,7 @@ export type Database = {
           centro_custo: string
           codigo_centro_custo: string | null
           created_at: string
+          data_emissao: string | null
           grupo_folha: string
           id: string
           is_13: boolean
@@ -162,6 +163,7 @@ export type Database = {
           centro_custo: string
           codigo_centro_custo?: string | null
           created_at?: string
+          data_emissao?: string | null
           grupo_folha?: string
           id?: string
           is_13?: boolean
@@ -189,6 +191,7 @@ export type Database = {
           centro_custo?: string
           codigo_centro_custo?: string | null
           created_at?: string
+          data_emissao?: string | null
           grupo_folha?: string
           id?: string
           is_13?: boolean

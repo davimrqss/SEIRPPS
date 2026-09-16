@@ -118,7 +118,6 @@ export default function Dashboard() {
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4 font-medium text-muted-foreground">Centro de Custo</th>
                     <th className="text-left py-3 px-4 font-medium text-muted-foreground">Mês</th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Tipo</th>
                     <th className="text-right py-3 px-4 font-medium text-muted-foreground">Valor Total</th>
                     <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
                   </tr>
@@ -132,9 +131,6 @@ export default function Dashboard() {
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
                         {new Date(folha.mes_referencia + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant={folha.tipo === "servidor" ? "default" : "secondary"} className="capitalize">{folha.tipo}</Badge>
                       </td>
                       <td className="py-3 px-4 text-right font-medium text-foreground">
                         {fmt(Number(folha.valor_servidor) + Number(folha.valor_patronal))}

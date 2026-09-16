@@ -6,6 +6,7 @@ export interface GuiaFolha {
   codigo_centro_custo?: string | null;
   orgao: string;
   mes_referencia: string;
+  data_emissao?: string | null;
   vencimento: string;
   remuneracao: number | string;
   base_calculo: number | string;
@@ -131,8 +132,8 @@ export function buildGuiaPDF(
   const pagarPatronal = somaPatronal - deducoes + juros;
   const decimo = folha.is_13 ? "Sim" : "Não";
   const comp = competencia(folha.mes_referencia);
+  const emissao = folha.data_emissao ? isoToBR(folha.data_emissao).replace(/-/g, "/") : "-";
   const venc = isoToBR(folha.vencimento).replace(/-/g, "/");
-  const orgaoLabel = [folha.orgao, folha.centro_custo].filter(Boolean).join(" - ");
 
   const aliq = (v: number, valor: number) =>
     `${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %   (${brl(valor)})`;
@@ -193,17 +194,45 @@ export function buildGuiaPDF(
     return top + 44;
   };
 
+  // ---------- Guia Servidor ----------
+  const servidorLeft: Row[] = [
+    { label: "RAZÃO SOCIAL", value: razao },
+    { label: "CNPJ", value: caixa.cnpj || "-" },
+    { label: "ÓRGÃO PAGADOR", value: folha.orgao || "-" },
+    { label: "CENTRO DE CUSTO", value: folha.centro_custo || "-" },
+    { label: "QTD. DE SERVIDORES", value: String(folha.num_empregados ?? 0) },
+    { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
+    { label: "COMPETÊNCIA", value: comp },
+    { label: "13°", value: decimo },
+  ];
+  const servidorRight: Row[] = [
+    { label: "DATA DE EMISSÃO", value: emissao },
+    { label: "VENCIMENTO", value: venc },
+    { label: "TOTAL BRUTO", value: brl(bruto) },
+    { label: "BASE DE CÁLCULO", value: brl(base) },
+    { label: "ALÍQUOTA", value: aliq(n(folha.aliquota_servidor), servidor) },
+    { label: "SERVIDOR", value: brl(servidor) },
+    { label: "TOTAL DA CONTRIBUIÇÃO", value: brl(servidor) },
+    { label: "JUROS / MULTA", value: brl(0) },
+    { label: "CORREÇÃO (INPC)", value: brl(0) },
+    { label: "VALOR A SER PAGO", value: brl(servidor) },
+  ];
+
+  y = drawSection("GUIA SERVIDOR", servidorLeft, servidorRight, y) + 20;
+
   // ---------- Guia Patronal ----------
   const patronalLeft: Row[] = [
     { label: "RAZÃO SOCIAL", value: razao },
     { label: "CNPJ", value: caixa.cnpj || "-" },
-    { label: "ÓRGÃO PAGADOR", value: orgaoLabel || "-" },
+    { label: "ÓRGÃO PAGADOR", value: folha.orgao || "-" },
+    { label: "CENTRO DE CUSTO", value: folha.centro_custo || "-" },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
     { label: "13°", value: decimo },
-    { label: "VENCIMENTO", value: venc },
   ];
   const patronalRight: Row[] = [
+    { label: "DATA DE EMISSÃO", value: emissao },
+    { label: "VENCIMENTO", value: venc },
     { label: "TOTAL BRUTO", value: brl(bruto) },
     { label: "BASE DE CÁLCULO", value: brl(base) },
     { label: "ALÍQUOTA PATRONAL", value: aliq(n(folha.aliquota_patronal), patronal) },
@@ -217,30 +246,6 @@ export function buildGuiaPDF(
   ];
 
   y = drawSection("GUIA PATRONAL", patronalLeft, patronalRight, y) + 20;
-
-  // ---------- Guia Servidor ----------
-  const servidorLeft: Row[] = [
-    { label: "RAZÃO SOCIAL", value: razao },
-    { label: "CNPJ", value: caixa.cnpj || "-" },
-    { label: "ÓRGÃO PAGADOR", value: orgaoLabel || "-" },
-    { label: "QTD. DE SERVIDORES", value: String(folha.num_empregados ?? 0) },
-    { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
-    { label: "COMPETÊNCIA", value: comp },
-    { label: "13°", value: decimo },
-  ];
-  const servidorRight: Row[] = [
-    { label: "VENCIMENTO", value: venc },
-    { label: "TOTAL BRUTO", value: brl(bruto) },
-    { label: "BASE DE CÁLCULO", value: brl(base) },
-    { label: "ALÍQUOTA", value: aliq(n(folha.aliquota_servidor), servidor) },
-    { label: "SERVIDOR", value: brl(servidor) },
-    { label: "TOTAL DA CONTRIBUIÇÃO", value: brl(servidor) },
-    { label: "JUROS / MULTA", value: brl(0) },
-    { label: "CORREÇÃO (INPC)", value: brl(0) },
-    { label: "VALOR A SER PAGO", value: brl(servidor) },
-  ];
-
-  y = drawSection("GUIA SERVIDOR", servidorLeft, servidorRight, y);
 
   // ---------- Total geral ----------
   const total = pagarPatronal + servidor;
