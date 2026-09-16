@@ -80,7 +80,8 @@ export function buildGuiaPDF(
   const R = 559;
   const MID = (M + R) / 2;
   const LABEL_W = 132;
-  const ROW_H = 16;
+  const MIN_ROW_H = 16;
+  const TEXT_LINE_H = 7;
 
   doc.setLineWidth(0.6);
   doc.setDrawColor(60, 60, 60);
@@ -95,8 +96,7 @@ export function buildGuiaPDF(
     doc.setTextColor(20, 20, 20);
     if (o?.maxW) {
       const lines = doc.splitTextToSize(t, o.maxW) as string[];
-      doc.text(lines[0] ?? "", x, y, { align: o?.align ?? "left" });
-      if (lines[1]) doc.text(lines[1], x, y + 7, { align: o?.align ?? "left" });
+      doc.text(lines, x, y, { align: o?.align ?? "left", lineHeightFactor: 1 });
       return;
     }
     doc.text(t, x, y, { align: o?.align ?? "left" });
@@ -151,18 +151,36 @@ export function buildGuiaPDF(
     top += 18;
 
     const rows = Math.max(left.length, right.length);
-    const h = rows * ROW_H;
+    const valueW = MID - M - LABEL_W - 8;
+    const lineCount = (value: string | undefined, width: number, size: number) => {
+      if (!value) return 1;
+      doc.setFont("helvetica", "bold").setFontSize(size);
+      return Math.max(1, (doc.splitTextToSize(value, width) as string[]).length);
+    };
+    const rowHeights = Array.from({ length: rows }, (_, i) => {
+      const leftRow = left[i];
+      const rightRow = right[i];
+      const lines = Math.max(
+        lineCount(leftRow?.label, LABEL_W - 8, 7),
+        lineCount(leftRow?.value, valueW, 7.5),
+        lineCount(rightRow?.label, LABEL_W - 8, 7),
+        lineCount(rightRow?.value, valueW, 7.5)
+      );
+      return Math.max(MIN_ROW_H, lines * TEXT_LINE_H + 6);
+    });
+    const h = rowHeights.reduce((sum, height) => sum + height, 0);
     doc.rect(M, top, R - M, h);
     doc.line(MID, top, MID, top + h);
     doc.line(M + LABEL_W, top, M + LABEL_W, top + h);
     doc.line(MID + LABEL_W, top, MID + LABEL_W, top + h);
 
     const paint = (list: Row[], x0: number, x1: number) => {
+      let ry = top;
       list.forEach((row, i) => {
-        const ry = top + i * ROW_H;
         if (i > 0) doc.line(x0, ry, x1, ry);
-        text(row.label, x0 + 4, ry + 11, { size: 7, maxW: LABEL_W - 8 });
-        if (row.value) text(row.value, x0 + LABEL_W + 4, ry + 11, { size: 7.5, bold: true, maxW: x1 - x0 - LABEL_W - 8 });
+        text(row.label, x0 + 4, ry + 10, { size: 7, maxW: LABEL_W - 8 });
+        if (row.value) text(row.value, x0 + LABEL_W + 4, ry + 10, { size: 7.5, bold: true, maxW: x1 - x0 - LABEL_W - 8 });
+        ry += rowHeights[i];
       });
     };
     paint(left, M, MID);
@@ -182,7 +200,7 @@ export function buildGuiaPDF(
     { label: "ÓRGÃO PAGADOR", value: orgaoLabel || "-" },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
-    { label: "DÉCIMO", value: decimo },
+    { label: "13°", value: decimo },
     { label: "VENCIMENTO", value: venc },
   ];
   const patronalRight: Row[] = [
@@ -208,7 +226,7 @@ export function buildGuiaPDF(
     { label: "QTD. DE SERVIDORES", value: String(folha.num_empregados ?? 0) },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
-    { label: "DÉCIMO", value: decimo },
+    { label: "13°", value: decimo },
   ];
   const servidorRight: Row[] = [
     { label: "VENCIMENTO", value: venc },
