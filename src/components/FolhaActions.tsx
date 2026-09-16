@@ -47,6 +47,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     orgao: folha.orgao,
     num_empregados: String(folha.num_empregados ?? 0),
     grupo_folha: folha.grupo_folha ?? "1 - Normal",
+    data_emissao: folha.data_emissao ?? "",
     vencimento: folha.vencimento,
     remuneracao: currencyToInput(folha.remuneracao),
     base_calculo: currencyToInput(folha.base_calculo),
@@ -57,7 +58,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     aux_doenca: currencyToInput(folha.aux_doenca),
     juros_multa: currencyToInput(folha.juros_multa),
     is_13: folha.is_13,
-    tipo: folha.tipo,
     paga: folha.paga,
   });
 
@@ -95,8 +95,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.vencimento) {
-      toast({ title: "Data inválida", description: "Informe o vencimento no formato dd-mm-aaaa.", variant: "destructive" });
+    if (!form.data_emissao || !form.vencimento) {
+      toast({ title: "Datas obrigatórias", description: "Informe as datas de emissão e vencimento.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -113,6 +113,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         num_empregados: parseInt(form.num_empregados) || 0,
         grupo_folha: form.grupo_folha,
         mes_referencia: form.vencimento.slice(0, 7),
+        data_emissao: form.data_emissao,
         vencimento: form.vencimento,
         remuneracao: parseCurrency(form.remuneracao),
         base_calculo: base,
@@ -125,7 +126,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         aux_doenca: parseCurrency(form.aux_doenca),
         juros_multa: parseCurrency(form.juros_multa),
         is_13: form.grupo_folha.includes("13"),
-        tipo: form.tipo,
+        tipo: "folha",
         paga: form.paga,
       })
       .eq("id", folha.id);
@@ -194,8 +195,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <Info label="Centro de Custo" value={folha.centro_custo} />
             <Info label="Órgão" value={folha.orgao} />
             <Info label="Mês de Referência" value={formatMes(folha.mes_referencia)} />
+            <Info label="Data de Emissão" value={folha.data_emissao ? new Date(folha.data_emissao + "T00:00:00").toLocaleDateString("pt-BR") : "Não informada"} />
             <Info label="Vencimento" value={new Date(folha.vencimento + "T00:00:00").toLocaleDateString("pt-BR")} />
-            <Info label="Tipo" value={folha.tipo} />
             <Info label="13° Salário" value={folha.is_13 ? "Sim" : "Não"} />
             <Info label="Remuneração" value={fmt(Number(folha.remuneracao))} />
             <Info label="Base de Cálculo" value={fmt(Number(folha.base_calculo))} />
@@ -250,20 +251,14 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-emissao">Data de Emissão</Label>
+                <DateField id="e-emissao" value={form.data_emissao} onChange={(iso) => change("data_emissao", iso)} required />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="e-venc">Vencimento</Label>
                 <DateField id="e-venc" value={form.vencimento} onChange={(iso) => change("vencimento", iso)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="e-tipo">Tipo de Folha</Label>
-                <Select value={form.tipo} onValueChange={(v) => change("tipo", v)}>
-                  <SelectTrigger id="e-tipo"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="servidor">Servidor</SelectItem>
-                    <SelectItem value="patronal">Patronal</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
