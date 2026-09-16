@@ -3,12 +3,12 @@
 ## Resultado esperado
 - O cadastro e a edição representarão uma única folha, contendo simultaneamente as contribuições do servidor e patronal.
 - O campo “Tipo de Folha” e seus indicadores/filtros visuais serão removidos.
-- O vencimento será sempre o dia 20 do mês escolhido.
+- Haverá uma data de emissão selecionável (normalmente dia 21) e uma data de vencimento selecionável (normalmente dia 20), ambas sem preenchimento automático.
 - O PDF exibirá “Centro de Custo” em uma linha própria, separado de “Órgão Pagador”.
 - A “Guia Servidor” aparecerá antes da “Guia Patronal”.
 
 ## Implementação
-1. Ajustar o formulário de nova folha para retirar o tipo e garantir dia 20 no vencimento.
+1. Ajustar o formulário de nova folha para retirar o tipo e incluir as datas selecionáveis de emissão e vencimento.
 2. Aplicar as mesmas regras na visualização e edição de folhas existentes.
 3. Remover o filtro, coluna e selo de tipo das telas de folhas e guias.
 4. Reorganizar o PDF, separando órgão e centro de custo e invertendo a ordem das duas guias.
@@ -16,5 +16,5 @@
 
 ## Detalhes técnicos
 - O campo interno legado `tipo` continuará preenchido com um valor compatível para não quebrar registros existentes, mas deixará de representar uma escolha do usuário.
-- Ao escolher uma data, o sistema normalizará o vencimento para o dia 20 do mesmo mês e usará esse mês como competência.
+- As datas não serão preenchidas nem alteradas automaticamente; a competência continuará baseada na data de vencimento selecionada.
 - Não haverá alteração no cálculo das contribuições servidor, patronal ou suplementar.
