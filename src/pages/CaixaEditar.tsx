@@ -35,7 +35,7 @@ export default function CaixaEditar() {
   const { data: logoUrl } = useLogoUrl(caixa?.logo_url);
 
   const [form, setForm] = useState({
-    nome: "", empresa: "", cnpj: "", email: "", telefone: "", endereco: "",
+    nome: "", razao_social: "", empresa: "", cnpj: "", email: "", telefone: "", endereco: "",
     cep: "", municipio: "", uf: "", estado: "",
     aliquota_servidor: "11", aliquota_patronal: "13.51", aliquota_suplementar: "0",
   });
@@ -44,6 +44,7 @@ export default function CaixaEditar() {
     if (!caixa) return;
     setForm({
       nome: caixa.nome ?? "",
+      razao_social: caixa.razao_social ?? "",
       empresa: caixa.empresa ?? "",
       cnpj: caixa.cnpj ?? "",
       email: caixa.email ?? "",
@@ -67,6 +68,7 @@ export default function CaixaEditar() {
         .from("caixas_previdencia")
         .update({
           nome: form.nome,
+          razao_social: form.razao_social || null,
           empresa: form.empresa || null,
           cnpj: form.cnpj || null,
           email: form.email || null,

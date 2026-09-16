@@ -115,7 +115,7 @@ export function buildGuiaPDF(
       /* logo inválida: segue sem imagem */
     }
   }
-  const razao = (caixa.razao_social || caixa.nome || "").toUpperCase();
+  const razao = (caixa.razao_social || "-").toUpperCase();
   text(razao, MID, y + 4, { align: "center", bold: true, size: 11 });
   y += 20;
 
