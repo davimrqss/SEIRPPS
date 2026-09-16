@@ -32,7 +32,6 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
   const { profile, signOut } = useAuth();
   const perms = usePermissions();
   const { data: caixa } = useCaixaAtiva();
-  const { data: caixaLogo } = useLogoUrl(caixa?.logo_url);
   const { data: avatar } = useLogoUrl(profile?.avatar_url ?? undefined);
 
   const systemName = caixa?.nome || "PrevSys";
@@ -65,17 +64,11 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
     >
       <div className="p-5 md:p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          {caixaLogo ? (
-            <img
-              src={caixaLogo}
-              alt={`Logo ${systemName}`}
-              className="h-10 w-10 shrink-0 object-contain rounded"
-            />
-          ) : (
-            <div className="h-10 w-10 shrink-0 rounded bg-sidebar-accent/40 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-sidebar-accent-foreground" />
-            </div>
-          )}
+          <img
+            src={logo}
+            alt="Logo PrevSys"
+            className="h-10 w-10 shrink-0 object-contain"
+          />
           <div className="min-w-0">
             <h1 className="text-lg font-bold text-sidebar-primary-foreground leading-tight truncate group-hover:whitespace-normal group-hover:overflow-visible group-hover:text-clip">
               {systemName}
