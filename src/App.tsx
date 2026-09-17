@@ -11,6 +11,7 @@ import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import FolhasPagamento from "./pages/FolhasPagamento";
 import NovaFolha from "./pages/NovaFolha";
+import ImportarFolha from "./pages/ImportarFolha";
 import LancarPagamento from "./pages/LancarPagamento";
 import GuiasPDF from "./pages/GuiasPDF";
 import Cadastro from "./pages/Cadastro";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/folhas" element={<FolhasPagamento />} />
               <Route path="/folhas/nova" element={<NovaFolha />} />
+              <Route path="/folhas/importar" element={<ImportarFolha />} />
               <Route path="/guias" element={<GuiasPDF />} />
               <Route path="/guias/:folhaId/pagamento" element={<LancarPagamento />} />
               <Route path="/caixas" element={<Caixas />} />

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { FileText, Filter, Plus } from "lucide-react";
+import { FileText, FileUp, Filter, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -64,9 +64,14 @@ export default function FolhasPagamento() {
           <h1 className="text-2xl font-bold text-foreground">Folhas de Pagamento</h1>
           <p className="text-muted-foreground mt-1">Gerencie e acompanhe as folhas de pagamento</p>
         </div>
-        <Button onClick={() => navigate("/folhas/nova")}>
-          <Plus className="h-4 w-4 mr-2" />Nova Folha
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => navigate("/folhas/importar")}>
+            <FileUp className="h-4 w-4 mr-2" />Importar PDF
+          </Button>
+          <Button onClick={() => navigate("/folhas/nova")}>
+            <Plus className="h-4 w-4 mr-2" />Nova Folha
+          </Button>
+        </div>
       </div>
 
       <Card>
