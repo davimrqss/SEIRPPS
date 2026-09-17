@@ -6,3 +6,6 @@
 - [x] Separar centro de custo de órgão pagador no PDF.
 - [x] Exibir a guia servidor antes da guia patronal.
 - [x] Validar a interface e o PDF gerado.
+- [ ] Adicionar importação de folhas por PDF com análise de IA.
+- [ ] Agrupar e revisar os valores por centro de custo antes de salvar.
+- [ ] Validar permissões, duplicidades, datas e importação em lote.
