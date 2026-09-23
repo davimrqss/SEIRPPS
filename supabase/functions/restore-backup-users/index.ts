@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import backupData from "./backup-data.json" with { type: "json" };
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,23 +38,37 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Restauração já iniciada" }, { status: 409, headers: corsHeaders });
   }
 
+  const { data: existingUsers, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (listError) return Response.json({ error: listError.message }, { status: 500, headers: corsHeaders });
+
   const restored: Array<{ email: string; id: string }> = [];
   for (const user of users) {
     const password = Deno.env.get(user.passwordEnv);
     if (!password) return Response.json({ error: "Senha de restauração indisponível" }, { status: 500, headers: corsHeaders });
 
-    const { data, error } = await admin.auth.admin.createUser({
-      id: user.id,
-      email: user.email,
-      password,
-      email_confirm: true,
-      user_metadata: { nome: user.nome },
-    });
+    const existing = existingUsers.users.find((candidate) => candidate.id === user.id || candidate.email?.toLowerCase() === user.email);
+    const result = existing
+      ? await admin.auth.admin.updateUserById(existing.id, { email: user.email, password, email_confirm: true, user_metadata: { nome: user.nome } })
+      : await admin.auth.admin.createUser({ id: user.id, email: user.email, password, email_confirm: true, user_metadata: { nome: user.nome } });
+    const { data, error } = result;
     if (error || !data.user) {
       return Response.json({ error: error?.message ?? `Falha ao recriar ${user.email}` }, { status: 400, headers: corsHeaders });
     }
     restored.push({ email: user.email, id: data.user.id });
   }
 
-  return Response.json({ restored }, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  const order = ["caixas_previdencia", "orgaos", "centros_custo", "folhas_pagamento", "funcionarios", "pagamentos", "profiles", "user_roles", "solicitacoes_conta"] as const;
+  const imported: Record<string, number> = {};
+  for (const table of order) {
+    const rows = backupData[table];
+    if (!rows.length) {
+      imported[table] = 0;
+      continue;
+    }
+    const { error } = await admin.from(table).upsert(rows, { onConflict: "id" });
+    if (error) return Response.json({ error: `${table}: ${error.message}`, restored, imported }, { status: 500, headers: corsHeaders });
+    imported[table] = rows.length;
+  }
+
+  return Response.json({ restored, imported }, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
