@@ -4,12 +4,21 @@ import { z } from "npm:zod@3";
 
 const BodySchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8).max(72),
+  password: z.string().min(6).max(72),
   nome: z.string().min(1).max(200),
   caixa_id: z.string().uuid().nullable().optional(),
   role: z.enum(["admin", "gestor_financeiro", "operador", "fiscal"]),
   cargo: z.string().max(200).optional(),
-});
+})
+.superRefine((data, ctx) => {
+    if (data.role !== "admin" && !data.caixa_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["caixa_id"],
+        message: "A caixa é obrigatória para este perfil",
+      });
+    }
+  });
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -66,7 +75,7 @@ Deno.serve(async (req) => {
     const { error: profErr } = await admin
       .from("profiles")
       .upsert(
-        { user_id: newUserId, nome, caixa_id, cargo: cargo ?? null },
+        { user_id: newUserId, nome, caixa_id : role === "admin" ? null : caixa id, cargo: cargo ?? null },
         { onConflict: "user_id" },
       );
     if (profErr) return json({ error: profErr.message }, 500);
