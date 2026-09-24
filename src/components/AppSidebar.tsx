@@ -109,7 +109,7 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
   const { data: caixa } = useCaixaAtiva();
   const { data: avatar } = useLogoUrl(profile?.avatar_url ?? undefined);
 
-  const systemName = caixa?.nome || "PrevSys";
+  const systemName = caixa?.nome || "SEI-RPPS";
 
   const navigationSections = [
     {
