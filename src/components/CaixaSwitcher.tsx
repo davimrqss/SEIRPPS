@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCaixas } from "@/hooks/useCaixa";
+import { useEffect } from "react";
 
 /** Seletor de caixa de previdência — visível apenas para administradores. */
 export function CaixaSwitcher() {
@@ -16,6 +17,12 @@ export function CaixaSwitcher() {
 
   if (!isAdmin) return null;
 
+  useEffect(() => {
+    if (isAdmin && !activeCaixaId && caixas.length > 0) {
+      setActiveCaixaId(caixas[0].id);
+    }
+  }, [isAdmin, activeCaixaId, caixas, setActiveCaixaId]);
+  
   return (
     <div className="px-4 pb-3">
       <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-sidebar-muted mb-1.5">
