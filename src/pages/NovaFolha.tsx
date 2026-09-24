@@ -185,30 +185,6 @@ export default function NovaFolha() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="valorServidor">Contribuição Servidor (R$)</Label>
-                <CurrencyInput
-                  id="valorServidor"
-                  value={valorServidorManual ?? currencyToInput(valorServidor)}
-                  onValueChange={setValorServidorManual}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {valorServidorManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valorPatronal">Contribuição Patronal (R$)</Label>
-                <CurrencyInput
-                  id="valorPatronal"
-                  value={valorPatronalManual ?? currencyToInput(valorPatronal)}
-                  onValueChange={setValorPatronalManual}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {valorPatronalManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label htmlFor="dataEmissao">Data de Emissão</Label>
                 <DateField id="dataEmissao" value={form.dataEmissao} onChange={(v) => handleChange("dataEmissao", v)} required />
               </div>
@@ -267,6 +243,30 @@ export default function NovaFolha() {
                     <SelectItem value="nao">Não</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="valorServidor">Contribuição Servidor (R$)</Label>
+                <CurrencyInput
+                  id="valorServidor"
+                  value={valorServidorManual ?? currencyToInput(valorServidor)}
+                  onValueChange={setValorServidorManual}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {valorServidorManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valorPatronal">Contribuição Patronal (R$)</Label>
+                <CurrencyInput
+                  id="valorPatronal"
+                  value={valorPatronalManual ?? currencyToInput(valorPatronal)}
+                  onValueChange={setValorPatronalManual}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {valorPatronalManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
