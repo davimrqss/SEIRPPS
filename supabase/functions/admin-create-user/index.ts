@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     const { error: profErr } = await admin
       .from("profiles")
       .upsert(
-        { user_id: newUserId, nome, caixa_id : role === "admin" ? null : caixa id, cargo: cargo ?? null },
+        { user_id: newUserId, nome, caixa_id : role === "admin" ? null : caixa_id, cargo: cargo ?? null },
         { onConflict: "user_id" },
       );
     if (profErr) return json({ error: profErr.message }, 500);
