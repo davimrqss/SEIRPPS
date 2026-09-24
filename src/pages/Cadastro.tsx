@@ -46,29 +46,41 @@ export default function Cadastro() {
     queryKey: ["contas-acesso", activeCaixaId],
     queryFn: async () => {
       const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("id, user_id, nome, cargo, caixa_id")
-        .eq("caixa_id", activeCaixaId!)
-        .order("nome");
-      if (error) throw error;
+      .from("profiles")
+      .select("id, user_id, nome, cargo, caixa_id")
+      .order("nome");
 
-      const ids = (profiles ?? []).map((p) => p.user_id);
-      let roles: { user_id: string; role: string }[] = [];
-      if (ids.length) {
-        const { data: rolesData } = await supabase
-          .from("user_roles")
-          .select("user_id, role")
-          .in("user_id", ids);
-        roles = rolesData ?? [];
-      }
+    if (error) throw error;
 
-      return (profiles ?? []).map((p) => ({
+    const ids = (profiles ?? []).map((p) => p.user_id);
+
+    let roles: { user_id: string; role: string }[] = [];
+
+    if (ids.length) {
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", ids);
+
+      if (rolesError) throw rolesError;
+      roles = rolesData ?? [];
+    }
+
+    return (profiles ?? [])
+      .map((p) => ({
         ...p,
-        roles: roles.filter((r) => r.user_id === p.user_id).map((r) => r.role),
-      }));
-    },
-    enabled: !!activeCaixaId,
-  });
+        roles: roles
+          .filter((r) => r.user_id === p.user_id)
+          .map((r) => r.role),
+      }))
+      .filter(
+        (p) =>
+          p.caixa_id === activeCaixaId ||
+          p.roles.includes("admin")
+      );
+  },
+  enabled: !!activeCaixaId,
+});
 
   const createUser = useMutation({
     mutationFn: async () => {
@@ -225,7 +237,7 @@ export default function Cadastro() {
                             <span className="text-muted-foreground">-</span>
                           ) : (
                             c.roles.map((r) => (
-                              <Badge key={r} variant="secondary">{ROLE_LABEL[r] ?? r}</Badge>
+                              <Badge key={r} variant="secondary">{r === "admin" ? "Administrador Global" : ROLE_LABEL[r] ?? r}</Badge>
                             ))
                           )}
                         </div>
