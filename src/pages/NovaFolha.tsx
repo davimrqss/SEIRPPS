@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
-import { fmtBRL, parseCurrency } from "@/lib/format";
+import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
 import { useCentrosCusto } from "@/hooks/useCadastros";
 
 export type CentroOpt = {
@@ -34,6 +34,8 @@ export default function NovaFolha() {
   const [loading, setLoading] = useState(false);
   const { data: centros = [] } = useCentrosCusto();
   const [centroId, setCentroId] = useState("");
+  const [valorServidorManual, setValorServidorManual] = useState<string | null>(null);
+  const [valorPatronalManual, setValorPatronalManual] = useState<string | null>(null);
   const [form, setForm] = useState({
     centroCusto: "",
     codigoCentroCusto: "",
@@ -87,6 +89,8 @@ export default function NovaFolha() {
   const valorServidor = baseCalc * (aliqServ / 100);
   const valorPatronal = baseCalc * (aliqPat / 100);
   const valorSuplementar = baseCalc * (aliqSup / 100);
+  const valorServidorFinal = valorServidorManual === null ? valorServidor : parseCurrency(valorServidorManual);
+  const valorPatronalFinal = valorPatronalManual === null ? valorPatronal : parseCurrency(valorPatronalManual);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,8 +125,8 @@ export default function NovaFolha() {
       grupo_folha: form.grupoFolha,
       remuneracao: parseCurrency(form.remuneracao),
       base_calculo: baseCalc,
-      valor_servidor: valorServidor,
-      valor_patronal: valorPatronal,
+      valor_servidor: valorServidorFinal,
+      valor_patronal: valorPatronalFinal,
       valor_suplementar: valorSuplementar,
       salario_maternidade: parseCurrency(form.salarioMaternidade),
       salario_familia: parseCurrency(form.salarioFamilia),
@@ -177,6 +181,30 @@ export default function NovaFolha() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="valorServidor">Contribuição Servidor (R$)</Label>
+                <CurrencyInput
+                  id="valorServidor"
+                  value={valorServidorManual ?? currencyToInput(valorServidor)}
+                  onValueChange={setValorServidorManual}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {valorServidorManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valorPatronal">Contribuição Patronal (R$)</Label>
+                <CurrencyInput
+                  id="valorPatronal"
+                  value={valorPatronalManual ?? currencyToInput(valorPatronal)}
+                  onValueChange={setValorPatronalManual}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {valorPatronalManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -262,11 +290,11 @@ export default function NovaFolha() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Segurados</p>
-                <p className="text-lg font-bold text-foreground">{fmtBRL(valorServidor)}</p>
+                <p className="text-lg font-bold text-foreground">{fmtBRL(valorServidorFinal)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Patronal</p>
-                <p className="text-lg font-bold text-foreground">{fmtBRL(valorPatronal)}</p>
+                <p className="text-lg font-bold text-foreground">{fmtBRL(valorPatronalFinal)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Suplementar</p>
@@ -276,7 +304,7 @@ export default function NovaFolha() {
                 <p className="text-sm text-muted-foreground">Total a recolher</p>
                 <p className="text-lg font-bold text-foreground">
                   {fmtBRL(
-                    valorServidor + valorPatronal + valorSuplementar
+                    valorServidorFinal + valorPatronalFinal + valorSuplementar
                     - parseCurrency(form.salarioMaternidade)
                     - parseCurrency(form.salarioFamilia)
                     - parseCurrency(form.auxDoenca)
