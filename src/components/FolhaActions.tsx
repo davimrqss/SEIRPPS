@@ -51,6 +51,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     vencimento: folha.vencimento,
     remuneracao: currencyToInput(folha.remuneracao),
     base_calculo: currencyToInput(folha.base_calculo),
+    valor_servidor: currencyToInput(folha.valor_servidor),
+    valor_patronal: currencyToInput(folha.valor_patronal),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
     salario_maternidade: currencyToInput(folha.salario_maternidade),
@@ -62,11 +64,18 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   });
 
   const [form, setForm] = useState(initial);
+  const [servidorManual, setServidorManual] = useState(false);
+  const [patronalManual, setPatronalManual] = useState(false);
   const { data: centros = [] } = useCentrosCusto();
   const [centroValue, setCentroValue] = useState("");
 
   const openEdit = () => {
     setForm(initial());
+    const initialBase = Number(folha.base_calculo);
+    const calculatedServidor = initialBase * (Number(folha.aliquota_servidor) / 100);
+    const calculatedPatronal = initialBase * (Number(folha.aliquota_patronal) / 100);
+    setServidorManual(Math.abs(Number(folha.valor_servidor) - calculatedServidor) > 0.009);
+    setPatronalManual(Math.abs(Number(folha.valor_patronal) - calculatedPatronal) > 0.009);
     const atual = (centros as CentroOpt[]).find((c) => c.nome === folha.centro_custo);
     setCentroValue(atual?.id ?? "");
     setEditOpen(true);
@@ -121,8 +130,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         vencimento: form.vencimento,
         remuneracao: parseCurrency(form.remuneracao),
         base_calculo: base,
-        valor_servidor: base * (aliqServ / 100),
-        valor_patronal: base * (aliqPat / 100),
+        valor_servidor: servidorManual ? parseCurrency(form.valor_servidor) : base * (aliqServ / 100),
+        valor_patronal: patronalManual ? parseCurrency(form.valor_patronal) : base * (aliqPat / 100),
         aliquota_servidor: aliqServ,
         aliquota_patronal: aliqPat,
         salario_maternidade: parseCurrency(form.salario_maternidade),
@@ -167,6 +176,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const base = parseCurrency(form.base_calculo);
   const previewServ = base * ((parseFloat(form.aliquota_servidor) || 0) / 100);
   const previewPat = base * ((parseFloat(form.aliquota_patronal) || 0) / 100);
+  const valorServidorFinal = servidorManual ? parseCurrency(form.valor_servidor) : previewServ;
+  const valorPatronalFinal = patronalManual ? parseCurrency(form.valor_patronal) : previewPat;
 
   return (
     <>
@@ -319,14 +330,44 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 <Input id="e-aliqp" type="number" step="0.01" value={form.aliquota_patronal} onChange={(e) => change("aliquota_patronal", e.target.value)} />
               </div>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="e-valor-servidor">Contribuição Servidor (R$)</Label>
+                <CurrencyInput
+                  id="e-valor-servidor"
+                  value={servidorManual ? form.valor_servidor : currencyToInput(previewServ)}
+                  onValueChange={(value) => {
+                    setServidorManual(true);
+                    change("valor_servidor", value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {servidorManual ? "Valor informado manualmente" : "Calculado automaticamente"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="e-valor-patronal">Contribuição Patronal (R$)</Label>
+                <CurrencyInput
+                  id="e-valor-patronal"
+                  value={patronalManual ? form.valor_patronal : currencyToInput(previewPat)}
+                  onValueChange={(value) => {
+                    setPatronalManual(true);
+                    change("valor_patronal", value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {patronalManual ? "Valor informado manualmente" : "Calculado automaticamente"}
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Contribuição Servidor</p>
-                <p className="text-lg font-bold text-foreground">{fmt(previewServ)}</p>
+                <p className="text-lg font-bold text-foreground">{fmt(valorServidorFinal)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Contribuição Patronal</p>
-                <p className="text-lg font-bold text-foreground">{fmt(previewPat)}</p>
+                <p className="text-lg font-bold text-foreground">{fmt(valorPatronalFinal)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
