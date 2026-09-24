@@ -9,3 +9,6 @@
 - [ ] Adicionar importação de folhas por PDF com análise de IA.
 - [ ] Agrupar e revisar os valores por centro de custo antes de salvar.
 - [ ] Validar permissões, duplicidades, datas e importação em lote.
+- [ ] Permitir valores manuais para contribuição do servidor e patronal, mantendo o cálculo automático.
+- [ ] Adicionar modos Grade e Lista à página de guias.
+- [ ] Trocar o ícone do site pelo “M” da logo META.
