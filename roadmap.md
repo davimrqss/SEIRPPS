@@ -6,12 +6,13 @@
 - [x] Separar centro de custo de órgão pagador no PDF.
 - [x] Exibir a guia servidor antes da guia patronal.
 - [x] Validar a interface e o PDF gerado.
-- [ ] Adicionar importação de folhas por PDF com análise de IA.
-- [ ] Agrupar e revisar os valores por centro de custo antes de salvar.
-- [ ] Validar permissões, duplicidades, datas e importação em lote.
-- [ ] Permitir valores manuais para contribuição do servidor e patronal, mantendo o cálculo automático.
-- [ ] Adicionar modos Grade e Lista à página de guias.
-- [ ] Trocar o ícone do site pelo “M” da logo META.
-- [ ] Migrar a análise da importação de PDFs para a API direta do Google Gemini.
-- [ ] Aceitar o formato atual da chave da Google AI API sem exigir prefixo específico.
-- [ ] Processar PDFs grandes em lotes e consolidar os centros sem duplicidade.
+- [x] Adicionar importação de folhas por PDF com análise de IA.
+- [x] Agrupar e revisar os valores por centro de custo antes de salvar.
+- [x] Validar permissões, duplicidades, datas e importação em lote.
+- [x] Permitir valores manuais para contribuição do servidor e patronal, mantendo o cálculo automático.
+- [x] Adicionar modos Grade e Lista à página de guias.
+- [x] Trocar o ícone do site pelo “M” da logo META.
+- [x] Migrar a análise da importação de PDFs para a API direta do Google Gemini.
+- [x] Aceitar o formato atual da chave da Google AI API sem exigir prefixo específico.
+- [x] Processar PDFs grandes em lotes e consolidar os centros sem duplicidade.
+- [ ] Publicar e testar a função Gemini no PrevSYS — bloqueado neste ambiente por falta de autorização da ferramenta de publicação.

@@ -1,11 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { NoObjectGeneratedError, Output, streamText } from "npm:ai";
 import { z } from "npm:zod";
-import { createResponsesProvider, getRequestRunId, responseHeaders } from "../_shared/ai-gateway.ts";
 
 const BodySchema = z.object({
-  pages: z.array(z.string().min(1).max(14_000)).min(1).max(100),
+  pages: z.array(z.string().min(1).max(14_000)).min(1).max(8),
 });
 
 const RowSchema = z.object({
@@ -30,6 +28,100 @@ const RowSchema = z.object({
 
 const ResultSchema = z.object({ rows: z.array(RowSchema) });
 
+const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const SYSTEM_PROMPT = `Você extrai resumos consolidados de folhas de pagamento brasileiras. Cada bloco corresponde a um centro de custo e pode repetir dados em páginas adjacentes. Retorne exatamente uma linha por código de centro, nunca uma linha por servidor. Use exclusivamente os totais consolidados do bloco: TOTAL REMUNERAÇÕES, Qtde de Funcionários e ENCARGOS PREVIDENCIÁRIOS RPPS. A base_calculo é BASE DE CÁLCULO PREVIDÊNCIA PRÓPRIA. valor_servidor é VALOR DA CONTRIBUIÇÃO DO SEGURADO (PREV. PRÓPRIA). valor_patronal é VALOR CONTRIBUIÇÃO PATRONAL (PREV. PRÓPRIA), antes das deduções. valor_suplementar é a contribuição suplementar. Extraia salário maternidade, salário família e auxílio doença da seção RPPS. Converta números brasileiros para números decimais. competencia deve ser AAAA-MM. grupo_folha deve ser "1 - Normal" ou "2 - 13° Salário". Use 0 quando um valor monetário não estiver presente. Não invente códigos, valores ou datas. Em observacoes, descreva somente ambiguidades relevantes.`;
+
+const rowJsonSchema = {
+  type: "object",
+  properties: {
+    codigo_centro_custo: { type: "string" }, centro_custo: { type: "string" },
+    competencia: { type: "string" }, grupo_folha: { type: "string" },
+    num_servidores: { type: "number" }, remuneracao: { type: "number" },
+    base_calculo: { type: "number" }, aliquota_servidor: { type: "number" },
+    aliquota_patronal: { type: "number" }, aliquota_suplementar: { type: "number" },
+    valor_servidor: { type: "number" }, valor_patronal: { type: "number" },
+    valor_suplementar: { type: "number" }, salario_maternidade: { type: "number" },
+    salario_familia: { type: "number" }, aux_doenca: { type: "number" },
+    observacoes: { type: "string" },
+  },
+  required: [
+    "codigo_centro_custo", "centro_custo", "competencia", "grupo_folha",
+    "num_servidores", "remuneracao", "base_calculo", "aliquota_servidor",
+    "aliquota_patronal", "aliquota_suplementar", "valor_servidor", "valor_patronal",
+    "valor_suplementar", "salario_maternidade", "salario_familia", "aux_doenca",
+    "observacoes",
+  ],
+};
+
+const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function callGemini(apiKey: string, pages: string[], signal: AbortSignal) {
+  const body = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [{ role: "user", parts: [{ text: `Analise estes blocos de resumo e devolva JSON estruturado. Remova duplicatas pelo código do centro.\n\n${pages.join("\n\n---\n\n")}` }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseJsonSchema: {
+        type: "object",
+        properties: { rows: { type: "array", items: rowJsonSchema } },
+        required: ["rows"],
+      },
+    },
+  };
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if ((response.status === 429 || response.status >= 500) && attempt < 2) {
+      const retryAfter = Number(response.headers.get("Retry-After"));
+      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 800 * (2 ** attempt));
+      continue;
+    }
+
+    const payload = await response.json().catch(() => null) as {
+      error?: { message?: string };
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+      promptFeedback?: { blockReason?: string };
+    } | null;
+
+    if (!response.ok) {
+      const safeMessage = response.status === 401 || response.status === 403
+        ? "A chave do Google AI não foi aceita. Verifique a chave e as permissões no Google AI Studio."
+        : response.status === 429
+          ? "O limite temporário da API do Google foi atingido. Aguarde e tente novamente."
+          : payload?.error?.message || "O Google Gemini não conseguiu analisar este lote.";
+      throw Object.assign(new Error(safeMessage), { statusCode: response.status });
+    }
+
+    const candidate = payload?.candidates?.[0];
+    const text = candidate?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+    if (!text) {
+      const reason = payload?.promptFeedback?.blockReason || candidate?.finishReason;
+      throw Object.assign(new Error(reason ? `A análise foi interrompida pelo Google: ${reason}.` : "O Gemini não retornou dados para este lote."), { statusCode: 422 });
+    }
+
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(text);
+    } catch {
+      throw Object.assign(new Error("O Gemini retornou uma resposta que não pôde ser lida."), { statusCode: 422 });
+    }
+    const validated = ResultSchema.safeParse(decoded);
+    if (!validated.success) {
+      throw Object.assign(new Error("O Gemini não conseguiu estruturar os resumos deste lote."), { statusCode: 422 });
+    }
+    return validated.data;
+  }
+
+  throw Object.assign(new Error("O Google Gemini está temporariamente indisponível."), { statusCode: 503 });
+}
+
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   new Response(JSON.stringify(body), {
     status,
@@ -47,8 +139,8 @@ Deno.serve(async (req) => {
     const url = Deno.env.get("SUPABASE_URL");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const aiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!url || !anonKey || !serviceKey || !aiKey) {
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!url || !anonKey || !serviceKey || !geminiKey) {
       return json({ error: "A análise por IA não está configurada." }, 500);
     }
 
@@ -72,35 +164,8 @@ Deno.serve(async (req) => {
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) return json({ error: "O conteúdo do PDF é inválido ou excede o limite." }, 400);
 
-    const initialRunId = getRequestRunId(req);
-    const gateway = createResponsesProvider(aiKey, initialRunId);
-    const result = streamText({
-      model: gateway.provider.responses("openai/gpt-6-astra"),
-      output: Output.object({ schema: ResultSchema }),
-      system: `Você extrai resumos consolidados de folhas de pagamento brasileiras. Cada bloco corresponde a um centro de custo e pode repetir dados em páginas adjacentes. Retorne exatamente uma linha por código de centro, nunca uma linha por servidor. Use exclusivamente os totais consolidados do bloco: TOTAL REMUNERAÇÕES, Qtde de Funcionários e ENCARGOS PREVIDENCIÁRIOS RPPS. A base_calculo é BASE DE CÁLCULO PREVIDÊNCIA PRÓPRIA. valor_servidor é VALOR DA CONTRIBUIÇÃO DO SEGURADO (PREV. PRÓPRIA). valor_patronal é VALOR CONTRIBUIÇÃO PATRONAL (PREV. PRÓPRIA), antes das deduções. valor_suplementar é a contribuição suplementar. Extraia salário maternidade, salário família e auxílio doença da seção RPPS. Converta números brasileiros para números decimais. competencia deve ser AAAA-MM. grupo_folha deve ser "1 - Normal" ou "2 - 13° Salário". Use 0 quando um valor monetário não estiver presente. Não invente códigos, valores ou datas. Em observacoes, descreva somente ambiguidades relevantes.`,
-      prompt: `Analise estes blocos de resumo e devolva JSON estruturado. Remova duplicatas pelo código do centro.\n\n${parsed.data.pages.join("\n\n---\n\n")}`,
-      providerOptions: {
-        openai: {
-          forceReasoning: true,
-          reasoningEffort: "low",
-          reasoningSummary: "auto",
-          store: false,
-          include: ["reasoning.encrypted_content"],
-        },
-      },
-      maxRetries: 2,
-      abortSignal: req.signal,
-    });
-
-    try {
-      const output = await result.output;
-      return json(output, 200, responseHeaders(gateway.getRunId()));
-    } catch (error) {
-      if (NoObjectGeneratedError.isInstance(error)) {
-        return json({ error: "A IA não conseguiu estruturar os resumos deste arquivo." }, 422, responseHeaders(gateway.getRunId()));
-      }
-      throw error;
-    }
+    const output = await callGemini(geminiKey, parsed.data.pages, req.signal);
+    return json(output);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       return json({ error: "Análise cancelada." }, 499);

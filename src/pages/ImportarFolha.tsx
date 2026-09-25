@@ -32,6 +32,7 @@ type Centro = { id: string; codigo: string; nome: string; orgaos?: { nome: strin
 
 const moneyText = (value: number) => value.toFixed(2).replace(".", ",");
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\W/g, "");
+const ANALYSIS_BATCH_SIZE = 5;
 
 export default function ImportarFolha() {
   const navigate = useNavigate();
@@ -58,9 +59,22 @@ export default function ImportarFolha() {
     try {
       const extraction = await extractPayrollSummaries(file, setProgress);
       setStatus(`Analisando ${extraction.summaryPages.length} resumos encontrados...`); setProgress(80);
-      const { data, error: functionError } = await supabase.functions.invoke("analyze-payroll-pdf", { body: { pages: extraction.summaryPages.slice(0, 100) } });
-      if (functionError) throw new Error((data as { error?: string } | null)?.error || functionError.message);
-      const aiRows = (data as { rows?: AiRow[] })?.rows ?? [];
+      const batches = Array.from(
+        { length: Math.ceil(extraction.summaryPages.length / ANALYSIS_BATCH_SIZE) },
+        (_, index) => extraction.summaryPages.slice(index * ANALYSIS_BATCH_SIZE, (index + 1) * ANALYSIS_BATCH_SIZE),
+      );
+      const consolidated = new Map<string, AiRow>();
+      for (let index = 0; index < batches.length; index += 1) {
+        setStatus(`Analisando lote ${index + 1} de ${batches.length} com o Google Gemini...`);
+        setProgress(80 + Math.round(((index + 1) / batches.length) * 18));
+        const { data, error: functionError } = await supabase.functions.invoke("analyze-payroll-pdf", { body: { pages: batches[index] } });
+        if (functionError) throw new Error((data as { error?: string } | null)?.error || functionError.message);
+        for (const row of (data as { rows?: AiRow[] })?.rows ?? []) {
+          const key = row.codigo_centro_custo.trim() || normalize(row.centro_custo);
+          if (key && !consolidated.has(key)) consolidated.set(key, row);
+        }
+      }
+      const aiRows = [...consolidated.values()];
       if (aiRows.length === 0) throw new Error("A análise terminou sem encontrar centros de custo.");
       const competence = aiRows.find((row) => /^\d{4}-\d{2}$/.test(row.competencia))?.competencia ?? "";
       const codes = aiRows.map((row) => row.codigo_centro_custo).filter(Boolean);
@@ -76,7 +90,7 @@ export default function ImportarFolha() {
         const duplicate = existingCodes.has(row.codigo_centro_custo);
         return { ...row, id: `${row.codigo_centro_custo}-${index}`, centroId: match?.id ?? "", selected: !!match && !duplicate, duplicate };
       }));
-      setProgress(100); setStatus(`${aiRows.length} centros encontrados em ${extraction.pageCount} páginas.`);
+       setProgress(100); setStatus(`${aiRows.length} centros encontrados em ${extraction.pageCount} páginas pelo Google Gemini.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível analisar o PDF.");
       setStatus(""); setProgress(0);
