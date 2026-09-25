@@ -15,3 +15,4 @@
 - [x] Migrar a análise da importação de PDFs para a API direta do Google Gemini.
 - [x] Aceitar o formato atual da chave da Google AI API sem exigir prefixo específico.
 - [x] Processar PDFs grandes em lotes e consolidar os centros sem duplicidade.
+- [ ] Publicar e testar a função Gemini no PrevSYS — bloqueado neste ambiente por falta de autorização da ferramenta de publicação.
