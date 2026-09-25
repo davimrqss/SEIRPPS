@@ -1,4 +1,6 @@
-# Previdência System 
+# Sistema de Gerenciamento de Caixa de Previdência
+
+# Vibe Code - Auxílio do Lovable para criação do projeto
 
 ## Development
 
