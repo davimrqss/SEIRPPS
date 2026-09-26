@@ -27,6 +27,7 @@ export type Database = {
           endereco: string | null
           estado: string | null
           id: string
+          indice_correcao: string
           logo_url: string | null
           municipio: string | null
           nome: string
@@ -47,6 +48,7 @@ export type Database = {
           endereco?: string | null
           estado?: string | null
           id?: string
+          indice_correcao?: string
           logo_url?: string | null
           municipio?: string | null
           nome: string
@@ -67,6 +69,7 @@ export type Database = {
           endereco?: string | null
           estado?: string | null
           id?: string
+          indice_correcao?: string
           logo_url?: string | null
           municipio?: string | null
           nome?: string
@@ -125,8 +128,44 @@ export type Database = {
           },
         ]
       }
+      descricoes_guias: {
+        Row: {
+          caixa_id: string
+          created_at: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          caixa_id: string
+          created_at?: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          caixa_id?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "descricoes_guias_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas_previdencia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folhas_pagamento: {
         Row: {
+          aliquota_correcao_patronal: number
+          aliquota_correcao_servidor: number
+          aliquota_juros_patronal: number
+          aliquota_juros_servidor: number
           aliquota_patronal: number
           aliquota_servidor: number
           aux_doenca: number
@@ -143,6 +182,7 @@ export type Database = {
           mes_referencia: string
           num_empregados: number
           orgao: string
+          orgao_id: string | null
           paga: boolean
           remuneracao: number
           salario_familia: number
@@ -155,6 +195,10 @@ export type Database = {
           vencimento: string
         }
         Insert: {
+          aliquota_correcao_patronal?: number
+          aliquota_correcao_servidor?: number
+          aliquota_juros_patronal?: number
+          aliquota_juros_servidor?: number
           aliquota_patronal?: number
           aliquota_servidor?: number
           aux_doenca?: number
@@ -171,6 +215,7 @@ export type Database = {
           mes_referencia: string
           num_empregados?: number
           orgao?: string
+          orgao_id?: string | null
           paga?: boolean
           remuneracao?: number
           salario_familia?: number
@@ -183,6 +228,10 @@ export type Database = {
           vencimento: string
         }
         Update: {
+          aliquota_correcao_patronal?: number
+          aliquota_correcao_servidor?: number
+          aliquota_juros_patronal?: number
+          aliquota_juros_servidor?: number
           aliquota_patronal?: number
           aliquota_servidor?: number
           aux_doenca?: number
@@ -199,6 +248,7 @@ export type Database = {
           mes_referencia?: string
           num_empregados?: number
           orgao?: string
+          orgao_id?: string | null
           paga?: boolean
           remuneracao?: number
           salario_familia?: number
@@ -216,6 +266,13 @@ export type Database = {
             columns: ["caixa_id"]
             isOneToOne: false
             referencedRelation: "caixas_previdencia"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folhas_pagamento_orgao_id_fkey"
+            columns: ["orgao_id"]
+            isOneToOne: false
+            referencedRelation: "orgaos"
             referencedColumns: ["id"]
           },
         ]
@@ -330,6 +387,7 @@ export type Database = {
           data_pagamento: string
           folha_id: string
           id: string
+          natureza: string | null
           observacoes: string | null
           valor_pago: number
           valor_recebido: number
@@ -340,6 +398,7 @@ export type Database = {
           data_pagamento?: string
           folha_id: string
           id?: string
+          natureza?: string | null
           observacoes?: string | null
           valor_pago?: number
           valor_recebido?: number
@@ -350,6 +409,7 @@ export type Database = {
           data_pagamento?: string
           folha_id?: string
           id?: string
+          natureza?: string | null
           observacoes?: string | null
           valor_pago?: number
           valor_recebido?: number
