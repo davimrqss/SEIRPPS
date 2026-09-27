@@ -1,328 +1,164 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Save } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useCaixaAtiva } from "@/hooks/useCaixa";
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
+import { useOrgaos } from "@/hooks/useCadastros";
+import { supabase } from "@/integrations/supabase/client";
 import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
-import { useCentrosCusto } from "@/hooks/useCadastros";
+import { calcularValoresGuia } from "@/lib/guiaCalculations";
+import { buildGuiaPDF, urlToDataUrl } from "@/lib/guiaPdf";
+import type { Tables } from "@/integrations/supabase/types";
 
-export type CentroOpt = {
-  id: string;
-  nome: string;
-  codigo: string | null;
-  orgaos?: { nome: string } | null;
-};
+type Guia = Tables<"folhas_pagamento">;
+
+export type CentroOpt = { id: string; nome: string; codigo: string | null; orgaos?: { nome: string } | null };
 
 export default function NovaFolha() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { activeCaixaId } = useAuth();
   const { data: caixa } = useCaixaAtiva();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const { data: logoUrl } = useLogoUrl(caixa?.logo_url);
+  const { data: orgaos = [] } = useOrgaos();
   const [loading, setLoading] = useState(false);
-  const { data: centros = [] } = useCentrosCusto();
-  const [centroId, setCentroId] = useState("");
+  const [salvarDescricao, setSalvarDescricao] = useState(false);
   const [valorServidorManual, setValorServidorManual] = useState<string | null>(null);
   const [valorPatronalManual, setValorPatronalManual] = useState<string | null>(null);
   const [form, setForm] = useState({
-    centroCusto: "",
-    codigoCentroCusto: "",
-    orgao: "",
-    dataEmissao: "",
-    vencimento: "",
-    numEmpregados: "",
-    grupoFolha: "1 - Normal",
-    remuneracao: "",
-    baseCalculo: "",
-    aliquotaServidor: "11",
-    aliquotaPatronal: "22",
-    aliquotaSuplementar: "0",
-    usaSuplementar: "nao",
-    salarioMaternidade: "",
-    salarioFamilia: "",
-    auxDoenca: "",
-    jurosMulta: "",
+    descricao: "", orgaoId: "", dataEmissao: "", vencimento: "", grupoFolha: "1 - Normal",
+    remuneracao: "", baseCalculo: "", aliquotaServidor: "11", aliquotaPatronal: "22",
+    aliquotaSuplementar: "0", usaSuplementar: "nao", salarioMaternidade: "", salarioFamilia: "",
+    auxDoenca: "", jurosServidor: "", jurosPatronal: "", correcaoServidor: "", correcaoPatronal: "",
+    pagamentoServidor: "", dataPagamentoServidor: "", pagamentoPatronal: "", dataPagamentoPatronal: "",
   });
 
-  // Alíquotas padrão vindas da caixa ativa
+  const { data: descricoes = [] } = useQuery({
+    queryKey: ["descricoes-guias", activeCaixaId],
+    queryFn: async () => {
+      if (!activeCaixaId) return [];
+      const { data, error } = await supabase.from("descricoes_guias").select("*").eq("caixa_id", activeCaixaId).order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: Boolean(activeCaixaId),
+  });
+
   useEffect(() => {
     if (!caixa) return;
-    setForm((prev) => ({
-      ...prev,
-      aliquotaServidor: String(caixa.aliquota_servidor ?? prev.aliquotaServidor),
-      aliquotaPatronal: String(caixa.aliquota_patronal ?? prev.aliquotaPatronal),
-      aliquotaSuplementar: String(caixa.aliquota_suplementar ?? prev.aliquotaSuplementar),
-    }));
+    setForm((prev) => ({ ...prev, aliquotaServidor: String(caixa.aliquota_servidor), aliquotaPatronal: String(caixa.aliquota_patronal), aliquotaSuplementar: String(caixa.aliquota_suplementar) }));
   }, [caixa]);
 
-  const handleChange = (field: string, value: string | boolean) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const set = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+  const base = parseCurrency(form.baseCalculo);
+  const aliqServidor = Number(form.aliquotaServidor) || 0;
+  const aliqPatronal = Number(form.aliquotaPatronal) || 0;
+  const aliqSuplementar = form.usaSuplementar === "sim" ? Number(form.aliquotaSuplementar) || 0 : 0;
+  const servidor = valorServidorManual === null ? base * aliqServidor / 100 : parseCurrency(valorServidorManual);
+  const patronal = valorPatronalManual === null ? base * aliqPatronal / 100 : parseCurrency(valorPatronalManual);
+  const suplementar = base * aliqSuplementar / 100;
 
-  const selecionarCentro = (id: string) => {
-    setCentroId(id);
-    const c = (centros as CentroOpt[]).find((x) => x.id === id);
-    if (!c) return;
-    setForm((prev) => ({
-      ...prev,
-      centroCusto: c.nome,
-      codigoCentroCusto: c.codigo ?? "",
-      orgao: c.orgaos?.nome ?? prev.orgao,
-    }));
-  };
+  const preview = useMemo(() => calcularValoresGuia({
+    valor_servidor: servidor, valor_patronal: patronal, valor_suplementar: suplementar,
+    salario_maternidade: parseCurrency(form.salarioMaternidade), salario_familia: parseCurrency(form.salarioFamilia),
+    aux_doenca: parseCurrency(form.auxDoenca), aliquota_juros_servidor: Number(form.jurosServidor) || 0,
+    aliquota_juros_patronal: Number(form.jurosPatronal) || 0, aliquota_correcao_servidor: Number(form.correcaoServidor) || 0,
+    aliquota_correcao_patronal: Number(form.correcaoPatronal) || 0,
+  } as Guia), [servidor, patronal, suplementar, form]);
 
-  const baseCalc = parseCurrency(form.baseCalculo);
-  const aliqServ = parseFloat(form.aliquotaServidor) || 0;
-  const aliqPat = parseFloat(form.aliquotaPatronal) || 0;
-  const aliqSup = form.usaSuplementar === "sim" ? parseFloat(form.aliquotaSuplementar) || 0 : 0;
-  const valorServidor = baseCalc * (aliqServ / 100);
-  const valorPatronal = baseCalc * (aliqPat / 100);
-  const valorSuplementar = baseCalc * (aliqSup / 100);
-  const valorServidorFinal = valorServidorManual === null ? valorServidor : parseCurrency(valorServidorManual);
-  const valorPatronalFinal = valorPatronalManual === null ? valorPatronal : parseCurrency(valorPatronalManual);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeCaixaId) {
-      toast({ title: "Erro", description: "Selecione uma caixa de previdência.", variant: "destructive" });
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!activeCaixaId || !form.descricao.trim() || !form.orgaoId || !form.dataEmissao || !form.vencimento) {
+      toast({ title: "Preencha os campos obrigatórios", description: "Descrição, órgão e datas são obrigatórios.", variant: "destructive" });
       return;
     }
-    if (!form.centroCusto) {
-      toast({ title: "Centro de custo", description: "Selecione um centro de custo.", variant: "destructive" });
+    if (form.vencimento.slice(-2) !== "20") {
+      toast({ title: "Confira o vencimento", description: "O vencimento deve ser no dia 20.", variant: "destructive" });
       return;
     }
-    if (!form.dataEmissao || !form.vencimento) {
-      toast({ title: "Datas obrigatórias", description: "Informe as datas de emissão e vencimento.", variant: "destructive" });
+    const pagamentoServidor = parseCurrency(form.pagamentoServidor);
+    const pagamentoPatronal = parseCurrency(form.pagamentoPatronal);
+    if ((pagamentoServidor > 0 && !form.dataPagamentoServidor) || (pagamentoPatronal > 0 && !form.dataPagamentoPatronal)) {
+      toast({ title: "Data do pagamento", description: "Informe a data de cada pagamento preenchido.", variant: "destructive" });
       return;
     }
-    if (form.dataEmissao.slice(-2) !== "21" || form.vencimento.slice(-2) !== "20") {
-      toast({ title: "Confira as datas", description: "A emissão deve ser no dia 21 e o vencimento no dia 20.", variant: "destructive" });
-      return;
-    }
-
+    const orgao = orgaos.find((item) => item.id === form.orgaoId);
+    if (!orgao) return;
+    const popup = window.open("", "_blank");
     setLoading(true);
-    const mesReferencia = form.vencimento.slice(0, 7);
-
-    const { error } = await supabase.from("folhas_pagamento").insert({
-      centro_custo: form.centroCusto,
-      codigo_centro_custo: form.codigoCentroCusto || null,
-      orgao: form.orgao,
-      mes_referencia: mesReferencia,
-      data_emissao: form.dataEmissao,
-      vencimento: form.vencimento,
-      num_empregados: parseInt(form.numEmpregados) || 0,
-      grupo_folha: form.grupoFolha,
-      remuneracao: parseCurrency(form.remuneracao),
-      base_calculo: baseCalc,
-      valor_servidor: valorServidorFinal,
-      valor_patronal: valorPatronalFinal,
-      valor_suplementar: valorSuplementar,
-      salario_maternidade: parseCurrency(form.salarioMaternidade),
-      salario_familia: parseCurrency(form.salarioFamilia),
-      aux_doenca: parseCurrency(form.auxDoenca),
-      juros_multa: parseCurrency(form.jurosMulta),
-      aliquota_servidor: aliqServ,
-      aliquota_patronal: aliqPat,
-      is_13: form.grupoFolha.includes("13"),
-      tipo: "folha",
-      caixa_id: activeCaixaId,
-    });
-
-    setLoading(false);
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    const payload = {
+      caixa_id: activeCaixaId, centro_custo: form.descricao.trim(), codigo_centro_custo: null,
+      orgao: orgao.nome, orgao_id: orgao.id, mes_referencia: form.vencimento.slice(0, 7),
+      data_emissao: form.dataEmissao, vencimento: form.vencimento, num_empregados: 0,
+      grupo_folha: form.grupoFolha, remuneracao: parseCurrency(form.remuneracao), base_calculo: base,
+      valor_servidor: servidor, valor_patronal: patronal, valor_suplementar: suplementar,
+      salario_maternidade: parseCurrency(form.salarioMaternidade), salario_familia: parseCurrency(form.salarioFamilia),
+      aux_doenca: parseCurrency(form.auxDoenca), juros_multa: preview.jurosServidor + preview.jurosPatronal,
+      aliquota_servidor: aliqServidor, aliquota_patronal: aliqPatronal,
+      aliquota_juros_servidor: Number(form.jurosServidor) || 0, aliquota_juros_patronal: Number(form.jurosPatronal) || 0,
+      aliquota_correcao_servidor: Number(form.correcaoServidor) || 0, aliquota_correcao_patronal: Number(form.correcaoPatronal) || 0,
+      is_13: form.grupoFolha.includes("13"), tipo: "folha", paga: false,
+    };
+    const { data: guia, error } = await supabase.from("folhas_pagamento").insert(payload).select().single();
+    if (error || !guia) {
+      popup?.close(); setLoading(false);
+      toast({ title: "Erro ao cadastrar guia", description: error?.message, variant: "destructive" });
       return;
     }
-
-    queryClient.invalidateQueries({ queryKey: ["folhas"] });
-    queryClient.invalidateQueries({ queryKey: ["folhas-guias"] });
-    queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] });
-    toast({ title: "Folha lançada com sucesso!", description: `${form.centroCusto} - ${mesReferencia}` });
-    navigate("/folhas");
+    if (salvarDescricao) {
+      await supabase.from("descricoes_guias").upsert({ caixa_id: activeCaixaId, nome: form.descricao.trim() }, { onConflict: "caixa_id,nome" });
+    }
+    const pagamentos = [
+      pagamentoServidor > 0 ? { folha_id: guia.id, natureza: "servidor", valor_pago: pagamentoServidor, valor_recebido: pagamentoServidor, data_pagamento: `${form.dataPagamentoServidor}T12:00:00`, observacoes: "Pagamento informado no cadastro da guia" } : null,
+      pagamentoPatronal > 0 ? { folha_id: guia.id, natureza: "patronal", valor_pago: pagamentoPatronal, valor_recebido: pagamentoPatronal, data_pagamento: `${form.dataPagamentoPatronal}T12:00:00`, observacoes: "Pagamento informado no cadastro da guia" } : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
+    if (pagamentos.length) await supabase.from("pagamentos").insert(pagamentos);
+    const paga = pagamentoServidor + 0.009 >= preview.devidoServidor && pagamentoPatronal + 0.009 >= preview.devidoPatronal;
+    if (paga) await supabase.from("folhas_pagamento").update({ paga: true }).eq("id", guia.id);
+    const logo = await urlToDataUrl(logoUrl);
+    const pdfUrl = buildGuiaPDF(guia, caixa ?? undefined, logo).output("bloburl") as unknown as string;
+    if (popup) popup.location.href = pdfUrl; else window.open(pdfUrl, "_blank");
+    setLoading(false);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["folhas-guias"] }),
+      queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] }),
+      queryClient.invalidateQueries({ queryKey: ["descricoes-guias"] }),
+    ]);
+    toast({ title: "Guia cadastrada!", description: "O PDF foi aberto em uma nova aba." });
+    navigate("/guias");
   };
 
-  return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/folhas")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />Voltar
-        </Button>
-        <h1 className="text-2xl font-bold text-foreground">Nova Folha de Pagamento</h1>
-        <p className="text-muted-foreground mt-1">Cadastre os dados da folha e as contribuições</p>
-      </div>
+  const percent = (id: string, label: string, field: string) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} type="number" min="0" step="0.01" value={form[field as keyof typeof form]} onChange={(e) => set(field, e.target.value)} /></div>;
+  const money = (id: string, label: string, field: string, required = false) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label><CurrencyInput id={id} value={form[field as keyof typeof form]} onValueChange={(value) => set(field, value)} required={required} /></div>;
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Dados da Folha</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2 md:col-span-3">
-                <Label htmlFor="centroCusto">Centro de Custo</Label>
-                <Select value={centroId || undefined} onValueChange={selecionarCentro}>
-                  <SelectTrigger id="centroCusto">
-                    <SelectValue placeholder={centros.length ? "Selecionar centro de custo" : "Nenhum centro de custo cadastrado"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(centros as CentroOpt[]).map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.codigo} - {c.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dataEmissao">Data de Emissão</Label>
-                <DateField id="dataEmissao" value={form.dataEmissao} onChange={(v) => handleChange("dataEmissao", v)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vencimento">Data de Vencimento</Label>
-                <DateField id="vencimento" value={form.vencimento} onChange={(v) => handleChange("vencimento", v)} required />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="numEmpregados">Nº de Servidores</Label>
-                <Input id="numEmpregados" type="number" min="0" value={form.numEmpregados} onChange={(e) => handleChange("numEmpregados", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="grupoFolha">Grupo Folha</Label>
-                <Select value={form.grupoFolha} onValueChange={(v) => handleChange("grupoFolha", v)}>
-                  <SelectTrigger id="grupoFolha"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1 - Normal">1 - Normal</SelectItem>
-                    <SelectItem value="2 - 13° Salário">2 - 13° Salário</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base">Valores</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="remuneracao">Remuneração (R$)</Label>
-                <CurrencyInput id="remuneracao" value={form.remuneracao} onValueChange={(v) => handleChange("remuneracao", v)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="baseCalculo">Salário de Contribuição / Base (R$)</Label>
-                <CurrencyInput id="baseCalculo" value={form.baseCalculo} onValueChange={(v) => handleChange("baseCalculo", v)} required />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="aliqServ">Alíquota Segurado (%)</Label>
-                <Input id="aliqServ" type="number" step="0.01" value={form.aliquotaServidor} onChange={(e) => handleChange("aliquotaServidor", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aliqPat">Alíquota Patronal (%)</Label>
-                <Input id="aliqPat" type="number" step="0.01" value={form.aliquotaPatronal} onChange={(e) => handleChange("aliquotaPatronal", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="usaSup">Alíquota Suplementar</Label>
-                <Select value={form.usaSuplementar} onValueChange={(v) => handleChange("usaSuplementar", v)}>
-                  <SelectTrigger id="usaSup"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sim">Sim ({form.aliquotaSuplementar}%)</SelectItem>
-                    <SelectItem value="nao">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="valorServidor">Contribuição Servidor (R$)</Label>
-                <CurrencyInput
-                  id="valorServidor"
-                  value={valorServidorManual ?? currencyToInput(valorServidor)}
-                  onValueChange={setValorServidorManual}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {valorServidorManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valorPatronal">Contribuição Patronal (R$)</Label>
-                <CurrencyInput
-                  id="valorPatronal"
-                  value={valorPatronalManual ?? currencyToInput(valorPatronal)}
-                  onValueChange={setValorPatronalManual}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {valorPatronalManual === null ? "Calculado automaticamente" : "Valor informado manualmente"}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="salMat">Salário Maternidade (R$)</Label>
-                <CurrencyInput id="salMat" value={form.salarioMaternidade} onValueChange={(v) => handleChange("salarioMaternidade", v)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="salFam">Salário Família (R$)</Label>
-                <CurrencyInput id="salFam" value={form.salarioFamilia} onValueChange={(v) => handleChange("salarioFamilia", v)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="auxDoenca">Auxílio Doença (R$)</Label>
-                <CurrencyInput id="auxDoenca" value={form.auxDoenca} onValueChange={(v) => handleChange("auxDoenca", v)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="jurosMulta">Juros / Multa (R$)</Label>
-                <CurrencyInput id="jurosMulta" value={form.jurosMulta} onValueChange={(v) => handleChange("jurosMulta", v)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Segurados</p>
-                <p className="text-lg font-bold text-foreground">{fmtBRL(valorServidorFinal)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Patronal</p>
-                <p className="text-lg font-bold text-foreground">{fmtBRL(valorPatronalFinal)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Suplementar</p>
-                <p className="text-lg font-bold text-foreground">{fmtBRL(valorSuplementar)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total a recolher</p>
-                <p className="text-lg font-bold text-foreground">
-                  {fmtBRL(
-                    valorServidorFinal + valorPatronalFinal + valorSuplementar
-                    - parseCurrency(form.salarioMaternidade)
-                    - parseCurrency(form.salarioFamilia)
-                    - parseCurrency(form.auxDoenca)
-                    + parseCurrency(form.jurosMulta)
-                  )}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={loading}>
-            <Save className="h-4 w-4 mr-2" />
-            {loading ? "Salvando..." : "Salvar Folha"}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+  return <div className="space-y-6 max-w-5xl">
+    <div><Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/guias")}><ArrowLeft className="h-4 w-4 mr-1" />Buscar guias</Button><h1 className="text-2xl font-bold text-foreground">Cadastrar Guia</h1><p className="text-muted-foreground mt-1">Informe os dados previdenciários e, se desejar, os pagamentos já realizados.</p></div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card><CardHeader><CardTitle className="text-base">Identificação da guia</CardTitle></CardHeader><CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label htmlFor="descricao">Descrição *</Label><Input id="descricao" list="descricoes-cadastradas" value={form.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Digite ou selecione uma descrição" /><datalist id="descricoes-cadastradas">{descricoes.map((item) => <option key={item.id} value={item.nome} />)}</datalist><div className="flex items-center gap-2"><Checkbox id="salvar-descricao" checked={salvarDescricao} onCheckedChange={(value) => setSalvarDescricao(value === true)} /><Label htmlFor="salvar-descricao" className="font-normal">Cadastrar esta descrição para reutilizar</Label></div></div><div className="space-y-2"><Label>Órgão pagador *</Label><Select value={form.orgaoId} onValueChange={(value) => set("orgaoId", value)}><SelectTrigger><SelectValue placeholder="Selecione o órgão" /></SelectTrigger><SelectContent>{orgaos.map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent></Select></div></div>
+        <div className="grid gap-4 md:grid-cols-3"><div className="space-y-2"><Label>Data de emissão *</Label><DateField value={form.dataEmissao} onChange={(value) => set("dataEmissao", value)} /></div><div className="space-y-2"><Label>Vencimento *</Label><DateField value={form.vencimento} onChange={(value) => set("vencimento", value)} /></div><div className="space-y-2"><Label>Grupo</Label><Select value={form.grupoFolha} onValueChange={(value) => set("grupoFolha", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1 - Normal">Normal</SelectItem><SelectItem value="2 - 13° Salário">13° Salário</SelectItem></SelectContent></Select></div></div>
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle className="text-base">Contribuições</CardTitle></CardHeader><CardContent className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-2">{money("remuneracao", "Remuneração (R$)", "remuneracao", true)}{money("base", "Base de cálculo (R$)", "baseCalculo", true)}</div>
+        <div className="grid gap-4 md:grid-cols-3">{percent("as", "Alíquota servidor (%)", "aliquotaServidor")}{percent("ap", "Alíquota patronal (%)", "aliquotaPatronal")}<div className="space-y-2"><Label>Alíquota suplementar</Label><Select value={form.usaSuplementar} onValueChange={(value) => set("usaSuplementar", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nao">Não aplicar</SelectItem><SelectItem value="sim">Aplicar {form.aliquotaSuplementar}%</SelectItem></SelectContent></Select></div></div>
+        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Contribuição servidor (R$)</Label><CurrencyInput value={valorServidorManual ?? currencyToInput(servidor)} onValueChange={setValorServidorManual} /><p className="text-xs text-muted-foreground">{valorServidorManual === null ? "Calculada automaticamente" : "Valor informado manualmente"}</p></div><div className="space-y-2"><Label>Contribuição patronal (R$)</Label><CurrencyInput value={valorPatronalManual ?? currencyToInput(patronal)} onValueChange={setValorPatronalManual} /><p className="text-xs text-muted-foreground">{valorPatronalManual === null ? "Calculada automaticamente" : "Valor informado manualmente"}</p></div></div>
+        <div className="grid gap-4 md:grid-cols-3">{money("mat", "Salário maternidade", "salarioMaternidade")}{money("fam", "Salário família", "salarioFamilia")}{money("aux", "Auxílio doença", "auxDoenca")}</div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">{percent("js", "Juros/Multa servidor (%)", "jurosServidor")}{percent("jp", "Juros/Multa patronal (%)", "jurosPatronal")}{percent("cs", `${caixa?.indice_correcao ?? "Correção"} servidor (%)`, "correcaoServidor")}{percent("cp", `${caixa?.indice_correcao ?? "Correção"} patronal (%)`, "correcaoPatronal")}</div>
+        <div className="grid gap-4 rounded-md bg-muted p-4 md:grid-cols-2"><div><p className="text-sm text-muted-foreground">Devido servidor</p><p className="text-xl font-bold">{fmtBRL(preview.devidoServidor)}</p></div><div><p className="text-sm text-muted-foreground">Devido patronal</p><p className="text-xl font-bold">{fmtBRL(preview.devidoPatronal)}</p></div></div>
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle className="text-base">Pagamentos iniciais (opcional)</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div className="space-y-3">{money("ps", "Valor pago — servidor", "pagamentoServidor")}<div className="space-y-2"><Label>Data — servidor</Label><DateField value={form.dataPagamentoServidor} onChange={(value) => set("dataPagamentoServidor", value)} /></div></div><div className="space-y-3">{money("pp", "Valor pago — patronal", "pagamentoPatronal")}<div className="space-y-2"><Label>Data — patronal</Label><DateField value={form.dataPagamentoPatronal} onChange={(value) => set("dataPagamentoPatronal", value)} /></div></div></CardContent></Card>
+      <div className="flex justify-end"><Button type="submit" size="lg" disabled={loading}><Save className="h-4 w-4 mr-2" />{loading ? "Cadastrando..." : "Cadastrar e visualizar PDF"}</Button></div>
+    </form>
+  </div>;
 }
