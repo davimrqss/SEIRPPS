@@ -37,7 +37,7 @@ export default function CaixaEditar() {
   const [form, setForm] = useState({
     nome: "", razao_social: "", empresa: "", cnpj: "", email: "", telefone: "", endereco: "",
     cep: "", municipio: "", uf: "", estado: "",
-    aliquota_servidor: "11", aliquota_patronal: "13.51", aliquota_suplementar: "0",
+    aliquota_servidor: "11", aliquota_patronal: "13.51", aliquota_suplementar: "0", indice_correcao: "INPC",
   });
 
   useEffect(() => {
@@ -57,6 +57,7 @@ export default function CaixaEditar() {
       aliquota_servidor: String(caixa.aliquota_servidor ?? 11),
       aliquota_patronal: String(caixa.aliquota_patronal ?? 13.51),
       aliquota_suplementar: String(caixa.aliquota_suplementar ?? 0),
+      indice_correcao: caixa.indice_correcao ?? "INPC",
     });
   }, [caixa]);
 
@@ -81,6 +82,7 @@ export default function CaixaEditar() {
           aliquota_servidor: parseFloat(form.aliquota_servidor) || 0,
           aliquota_patronal: parseFloat(form.aliquota_patronal) || 0,
           aliquota_suplementar: parseFloat(form.aliquota_suplementar) || 0,
+          indice_correcao: form.indice_correcao.trim() || "INPC",
         })
         .eq("id", caixaId!);
       if (error) throw error;
@@ -175,11 +177,12 @@ export default function CaixaEditar() {
             <Percent className="h-5 w-5 text-primary" />Alíquotas padrão
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {field("aliquota_servidor", "Servidor (%)", { type: "number", step: "0.01" })}
           {field("aliquota_patronal", "Patronal (%)", { type: "number", step: "0.01" })}
           {field("aliquota_suplementar", "Suplementar (%)", { type: "number", step: "0.01" })}
-          <p className="md:col-span-3 text-xs text-muted-foreground">
+          {field("indice_correcao", "Índice de correção", { placeholder: "INPC, IPCA..." })}
+          <p className="md:col-span-2 lg:col-span-4 text-xs text-muted-foreground">
             A alíquota suplementar definida aqui é usada quando a folha for marcada com "Sim".
           </p>
         </CardContent>

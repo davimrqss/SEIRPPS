@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,9 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import FolhasPagamento from "./pages/FolhasPagamento";
 import NovaFolha from "./pages/NovaFolha";
-import ImportarFolha from "./pages/ImportarFolha";
 import LancarPagamento from "./pages/LancarPagamento";
 import GuiasPDF from "./pages/GuiasPDF";
 import Cadastro from "./pages/Cadastro";
@@ -44,9 +42,10 @@ const App = () => (
               }
             >
               <Route path="/" element={<Dashboard />} />
-              <Route path="/folhas" element={<FolhasPagamento />} />
-              <Route path="/folhas/nova" element={<NovaFolha />} />
-              <Route path="/folhas/importar" element={<ImportarFolha />} />
+              <Route path="/folhas" element={<Navigate to="/guias/cadastrar" replace />} />
+              <Route path="/folhas/nova" element={<Navigate to="/guias/cadastrar" replace />} />
+              <Route path="/folhas/importar" element={<Navigate to="/guias/cadastrar" replace />} />
+              <Route path="/guias/cadastrar" element={<NovaFolha />} />
               <Route path="/guias" element={<GuiasPDF />} />
               <Route path="/guias/:folhaId/pagamento" element={<LancarPagamento />} />
               <Route path="/caixas" element={<Caixas />} />
