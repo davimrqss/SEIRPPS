@@ -119,8 +119,8 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
     {
       title: "Gestão Previdenciária",
       items: [
-        { to: "/folhas", icon: FileText, label: "Folhas de Pagamento" },
-        { to: "/guias", icon: FileDown, label: "Guias PDF" },
+        { to: "/guias/cadastrar", icon: FileText, label: "Cadastrar Guia" },
+        { to: "/guias", icon: FileDown, label: "Buscar Guias" },
       ],
     },
     {
@@ -129,7 +129,7 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
         ? [
             { to: "/caixas", icon: Landmark, label: "Caixa de Previdência" },
             { to: "/orgaos", icon: Building2, label: "Órgãos" },
-            { to: "/centros-custo", icon: Wallet, label: "Centros de Custo" },
+            { to: "/centros-custo", icon: Wallet, label: "Descrições antigas" },
           ]
         : [],
     },
