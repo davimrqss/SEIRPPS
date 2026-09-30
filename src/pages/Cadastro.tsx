@@ -124,7 +124,7 @@ export default function Cadastro() {
 
     onSuccess: () => {
       toast.success(
-        "Conta criada! Envie o e-mail e a senha provisória ao usuário.",
+        "Conta criada! Envie o e-mail e a senha ao usuário.",
       );
 
       setForm((anterior) => ({
@@ -162,10 +162,6 @@ export default function Cadastro() {
           Contas de Acesso
         </h1>
 
-        <p className="mt-1 text-muted-foreground">
-          Crie os logins do sistema e vincule cada conta a uma caixa de
-          previdência
-        </p>
       </div>
 
       {canManageUsers && (
@@ -220,7 +216,7 @@ export default function Cadastro() {
 
               <div className="space-y-2">
                 <Label htmlFor="u-pass">
-                  Senha provisória * (mín. 6 caracteres)
+                  Senha * (mín. 6 caracteres)
                 </Label>
 
                 <Input
@@ -367,10 +363,6 @@ export default function Cadastro() {
                 </Select>
 
                 {form.role === "admin" && (
-                  <p className="text-xs text-muted-foreground">
-                    Administradores têm acesso global e não ficam
-                    vinculados a uma caixa.
-                  </p>
                 )}
               </div>
 
@@ -399,10 +391,6 @@ export default function Cadastro() {
               </div>
             </form>
 
-            <p className="mt-3 text-xs text-muted-foreground">
-              A conta já vem confirmada — não é enviado e-mail de
-              confirmação.
-            </p>
           </CardContent>
         </Card>
       )}

@@ -78,7 +78,7 @@ export default function CentrosCusto() {
     }
     invalidate();
     setDialogOpen(false);
-    toast.success(editing ? "Centro de custo atualizado!" : "Centro de custo cadastrado!");
+    toast.success(editing ? "Descrição atualizada!" : "Descrição cadastrada!");
   };
 
   const handleDelete = async () => {
@@ -90,7 +90,7 @@ export default function CentrosCusto() {
     }
     invalidate();
     setRemoving(null);
-    toast.success("Centro de custo excluído.");
+    toast.success("Descrição excluída.");
   };
 
   const filtrados = (centros as CentroCusto[]).filter(
@@ -103,11 +103,10 @@ export default function CentrosCusto() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Centros de Custo</h1>
-          <p className="text-muted-foreground mt-1">Códigos usados nas folhas de pagamento</p>
+          <h1 className="text-2xl font-bold text-foreground">Descrição</h1>
         </div>
         {canEditCentrosCusto && (
-          <Button onClick={openNovo}><Plus className="h-4 w-4 mr-2" />Novo Centro de Custo</Button>
+          <Button onClick={openNovo}><Plus className="h-4 w-4 mr-2" />Nova Descrição</Button>
         )}
       </div>
 
@@ -138,7 +137,7 @@ export default function CentrosCusto() {
                   <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
                 ) : filtrados.length === 0 ? (
                   <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">
-                    <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />Nenhum centro de custo cadastrado
+                    <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />Nenhuma descrição cadastrada
                   </td></tr>
                 ) : (
                   filtrados.map((c) => (
@@ -172,7 +171,7 @@ export default function CentrosCusto() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar Centro de Custo" : "Novo Centro de Custo"}</DialogTitle>
+            <DialogTitle>{editing ? "Editar Descrição" : "Nova Descrição"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -197,7 +196,7 @@ export default function CentrosCusto() {
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="cc-desc">Descrição</Label>
+              <Label htmlFor="cc-desc">Observação</Label>
               <Input id="cc-desc" value={form.descricao} onChange={(e) => set("descricao", e.target.value)} />
             </div>
             <DialogFooter className="md:col-span-2">
@@ -213,7 +212,7 @@ export default function CentrosCusto() {
       <AlertDialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir centro de custo?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Descrição?</AlertDialogTitle>
             <AlertDialogDescription>{removing?.nome} será removido.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -104,9 +104,6 @@ export default function Caixas() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Caixas de Previdência</h1>
-          <p className="text-muted-foreground mt-1">
-            Consulte e edite os dados das caixas cadastradas
-          </p>
         </div>
         {canEditCaixasEOrgaos && (
           <Button onClick={criarCaixa} disabled={criando}>

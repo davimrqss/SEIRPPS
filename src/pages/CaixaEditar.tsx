@@ -213,7 +213,7 @@ export default function CaixaEditar() {
                   if (file) uploadLogo.mutate(file);
                 }}
               />
-              <p className="text-xs text-muted-foreground">PNG ou JPG. Aparece ao lado do nome no menu.</p>
+              <p className="text-xs text-muted-foreground">PNG ou JPG.</p>
             </div>
           )}
         </CardContent>

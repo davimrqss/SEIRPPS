@@ -81,9 +81,6 @@ export default function Login() {
               {loading ? "Aguarde..." : "Entrar"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            O acesso é criado pelo administrador da sua caixa de previdência.
-          </p>
         </CardContent>
 
       </Card>

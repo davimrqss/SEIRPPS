@@ -127,7 +127,7 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
         ? [
             { to: "/caixas", icon: Landmark, label: "Caixa de Previdência" },
             { to: "/orgaos", icon: Building2, label: "Órgãos" },
-            { to: "/centros-custo", icon: Wallet, label: "Descrições antigas" },
+            { to: "/centros-custo", icon: Wallet, label: "Descrições" },
           ]
         : [],
     },
