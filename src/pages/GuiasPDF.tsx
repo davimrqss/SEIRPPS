@@ -65,7 +65,7 @@ export default function GuiasPDF() {
 
   return <div className="space-y-6">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div><h1 className="text-2xl font-bold text-foreground">Buscar Guias</h1><p className="mt-1 text-muted-foreground">Consulte valores, pagamentos e saldos de cada guia.</p></div>
+      <div><h1 className="text-2xl font-bold text-foreground">Guias de Recolhimento</h1><p className="mt-1 text-muted-foreground">Consulte valores, pagamentos e saldos de cada guia.</p></div>
       {canEditFolhas && <Button onClick={() => navigate("/guias/cadastrar")}><Plus className="mr-2 h-4 w-4" />Cadastrar Guia</Button>}
     </div>
     <Card><CardHeader><CardTitle className="text-base">Filtros</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-4">

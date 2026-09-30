@@ -42,7 +42,7 @@ const App = () => (
               }
             >
               <Route path="/" element={<Dashboard />} />
-              <Route path="/folhas" element={<Navigate to="/guias/cadastrar" replace />} />
+              <Route path="/folhas" element={<Navigate to="/guias" replace />} />
               <Route path="/folhas/nova" element={<Navigate to="/guias/cadastrar" replace />} />
               <Route path="/folhas/importar" element={<Navigate to="/guias/cadastrar" replace />} />
               <Route path="/guias/cadastrar" element={<NovaFolha />} />

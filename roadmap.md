@@ -16,11 +16,11 @@
 - [x] Aceitar o formato atual da chave da Google AI API sem exigir prefixo específico.
 - [x] Processar PDFs grandes em lotes e consolidar os centros sem duplicidade.
 - [ ] Publicar e testar a função Gemini no PrevSYS — bloqueado neste ambiente por falta de autorização da ferramenta de publicação.
-- [ ] Reformular Folhas de Pagamento para Cadastrar Guia e Buscar Guias.
-- [ ] Criar descrições independentes de órgãos, com seleção, texto livre e cadastro opcional.
-- [ ] Adicionar juros, multa e correção por alíquotas separadas para servidor e patronal.
-- [ ] Configurar o índice de correção por caixa de previdência.
-- [ ] Registrar pagamentos e datas separadas para servidor e patronal.
-- [ ] Adicionar filtros e saldos separados ao dashboard.
-- [ ] Criar panorama mensal por órgão, total anual e exportação em PDF.
+- [x] Reformular Folhas de Pagamento para Cadastrar Guia e Guias de Recolhimento.
+- [x] Criar descrições independentes de órgãos, com seleção, texto livre e cadastro opcional.
+- [x] Adicionar juros, multa e correção por alíquotas separadas para servidor e patronal.
+- [x] Configurar o índice de correção por caixa de previdência.
+- [x] Registrar pagamentos e datas separadas para servidor e patronal.
+- [x] Adicionar filtros e saldos separados ao dashboard.
+- [x] Criar panorama mensal por órgão, total anual e exportação em PDF.
 - [ ] Validar migração, permissões, responsividade e PDFs.
