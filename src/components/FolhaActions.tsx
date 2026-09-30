@@ -55,7 +55,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     valor_suplementar: currencyToInput(folha.valor_suplementar),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
-    aliquota_suplementar: String(folha.aliquota_suplementar ?? 0),
     aliquota_juros_servidor: String(folha.aliquota_juros_servidor ?? 0),
     aliquota_juros_patronal: String(folha.aliquota_juros_patronal ?? 0),
     aliquota_correcao_servidor: String(folha.aliquota_correcao_servidor ?? 0),
@@ -131,7 +130,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         valor_suplementar: parseCurrency(form.valor_suplementar),
         aliquota_servidor: aliqServ,
         aliquota_patronal: aliqPat,
-        aliquota_suplementar: parseFloat(form.aliquota_suplementar) || 0,
         aliquota_juros_servidor: parseFloat(form.aliquota_juros_servidor) || 0,
         aliquota_juros_patronal: parseFloat(form.aliquota_juros_patronal) || 0,
         aliquota_correcao_servidor: parseFloat(form.aliquota_correcao_servidor) || 0,
@@ -328,9 +326,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 <Input id="e-aliqp" type="number" step="0.01" value={form.aliquota_patronal} onChange={(e) => change("aliquota_patronal", e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><Label htmlFor="e-supl">Contribuição Suplementar (R$)</Label><CurrencyInput id="e-supl" value={form.valor_suplementar} onValueChange={(v) => change("valor_suplementar", v)} /></div>
-              <div className="space-y-2"><Label htmlFor="e-aliq-supl">Alíquota Suplementar (%)</Label><Input id="e-aliq-supl" type="number" min="0" step="0.01" value={form.aliquota_suplementar} onChange={(e) => change("aliquota_suplementar", e.target.value)} /></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2"><Label htmlFor="e-js">Juros/Multa servidor (%)</Label><Input id="e-js" type="number" min="0" step="0.01" value={form.aliquota_juros_servidor} onChange={(e) => change("aliquota_juros_servidor", e.target.value)} /></div>
