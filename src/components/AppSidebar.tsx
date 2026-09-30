@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  FileText,
   Users,
   FileDown,
   LogOut,
@@ -119,8 +118,7 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
     {
       title: "Gestão Previdenciária",
       items: [
-        { to: "/guias/cadastrar", icon: FileText, label: "Cadastrar Guia" },
-        { to: "/guias", icon: FileDown, label: "Buscar Guias" },
+        { to: "/guias", icon: FileDown, label: "Guias de Recolhimento" },
       ],
     },
     {

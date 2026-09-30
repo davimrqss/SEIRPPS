@@ -17,6 +17,7 @@ export default function CaixaEditar() {
   const queryClient = useQueryClient();
   const { canEditCaixasEOrgaos } = usePermissions();
   const readOnly = !canEditCaixasEOrgaos;
+  const validCaixaId = caixaId ?? "";
 
   const { data: caixa, isLoading } = useQuery({
     queryKey: ["caixa-editar", caixaId],
@@ -24,7 +25,7 @@ export default function CaixaEditar() {
       const { data, error } = await supabase
         .from("caixas_previdencia")
         .select("*")
-        .eq("id", caixaId!)
+        .eq("id", validCaixaId)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -84,7 +85,7 @@ export default function CaixaEditar() {
           aliquota_suplementar: parseFloat(form.aliquota_suplementar) || 0,
           indice_correcao: form.indice_correcao.trim() || "INPC",
         })
-        .eq("id", caixaId!);
+        .eq("id", validCaixaId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -100,13 +101,13 @@ export default function CaixaEditar() {
   const uploadLogo = useMutation({
     mutationFn: async (file: File) => {
       const ext = file.name.split(".").pop() ?? "png";
-      const path = `${caixaId}/logo-${Date.now()}.${ext}`;
+      const path = `${validCaixaId}/logo-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
       if (error) throw error;
       const { error: updErr } = await supabase
         .from("caixas_previdencia")
         .update({ logo_url: path })
-        .eq("id", caixaId!);
+        .eq("id", validCaixaId);
       if (updErr) throw updErr;
     },
     onSuccess: () => {

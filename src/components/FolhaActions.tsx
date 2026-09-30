@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -21,8 +20,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
 import { currencyToInput, parseCurrency } from "@/lib/format";
-import { useCentrosCusto } from "@/hooks/useCadastros";
-import type { CentroOpt } from "@/pages/NovaFolha";
+import { useOrgaos } from "@/hooks/useCadastros";
+import { useCaixaAtiva } from "@/hooks/useCaixa";
+import { calcularValoresGuia } from "@/lib/guiaCalculations";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Folha = Tables<"folhas_pagamento">;
@@ -45,7 +45,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     centro_custo: folha.centro_custo,
     codigo_centro_custo: folha.codigo_centro_custo ?? "",
     orgao: folha.orgao,
-    num_empregados: String(folha.num_empregados ?? 0),
     grupo_folha: folha.grupo_folha ?? "1 - Normal",
     data_emissao: folha.data_emissao ?? "",
     vencimento: folha.vencimento,
@@ -53,21 +52,26 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     base_calculo: currencyToInput(folha.base_calculo),
     valor_servidor: currencyToInput(folha.valor_servidor),
     valor_patronal: currencyToInput(folha.valor_patronal),
+    valor_suplementar: currencyToInput(folha.valor_suplementar),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
+    aliquota_suplementar: String(folha.aliquota_suplementar ?? 0),
+    aliquota_juros_servidor: String(folha.aliquota_juros_servidor ?? 0),
+    aliquota_juros_patronal: String(folha.aliquota_juros_patronal ?? 0),
+    aliquota_correcao_servidor: String(folha.aliquota_correcao_servidor ?? 0),
+    aliquota_correcao_patronal: String(folha.aliquota_correcao_patronal ?? 0),
     salario_maternidade: currencyToInput(folha.salario_maternidade),
     salario_familia: currencyToInput(folha.salario_familia),
     aux_doenca: currencyToInput(folha.aux_doenca),
-    juros_multa: currencyToInput(folha.juros_multa),
     is_13: folha.is_13,
-    paga: folha.paga,
+    orgao_id: folha.orgao_id ?? "",
   });
 
   const [form, setForm] = useState(initial);
   const [servidorManual, setServidorManual] = useState(false);
   const [patronalManual, setPatronalManual] = useState(false);
-  const { data: centros = [] } = useCentrosCusto();
-  const [centroValue, setCentroValue] = useState("");
+  const { data: orgaos = [] } = useOrgaos();
+  const { data: caixa } = useCaixaAtiva();
 
   const openEdit = () => {
     setForm(initial());
@@ -76,21 +80,13 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     const calculatedPatronal = initialBase * (Number(folha.aliquota_patronal) / 100);
     setServidorManual(Math.abs(Number(folha.valor_servidor) - calculatedServidor) > 0.009);
     setPatronalManual(Math.abs(Number(folha.valor_patronal) - calculatedPatronal) > 0.009);
-    const atual = (centros as CentroOpt[]).find((c) => c.nome === folha.centro_custo);
-    setCentroValue(atual?.id ?? "");
     setEditOpen(true);
   };
 
-  const selecionarCentro = (id: string) => {
-    setCentroValue(id);
-    const c = (centros as CentroOpt[]).find((x) => x.id === id);
-    if (!c) return;
-    setForm((prev) => ({
-      ...prev,
-      centro_custo: c.nome,
-      codigo_centro_custo: c.codigo ?? "",
-      orgao: c.orgaos?.nome ?? prev.orgao,
-    }));
+  const selecionarOrgao = (id: string) => {
+    const orgao = orgaos.find((item) => item.id === id);
+    if (!orgao) return;
+    setForm((prev) => ({ ...prev, orgao_id: id, orgao: orgao.nome }));
   };
 
   const change = (field: string, value: string | boolean) =>
@@ -123,7 +119,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         centro_custo: form.centro_custo,
         codigo_centro_custo: form.codigo_centro_custo || null,
         orgao: form.orgao,
-        num_empregados: parseInt(form.num_empregados) || 0,
+        orgao_id: form.orgao_id || null,
         grupo_folha: form.grupo_folha,
         mes_referencia: form.vencimento.slice(0, 7),
         data_emissao: form.data_emissao,
@@ -132,15 +128,19 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         base_calculo: base,
         valor_servidor: servidorManual ? parseCurrency(form.valor_servidor) : base * (aliqServ / 100),
         valor_patronal: patronalManual ? parseCurrency(form.valor_patronal) : base * (aliqPat / 100),
+        valor_suplementar: parseCurrency(form.valor_suplementar),
         aliquota_servidor: aliqServ,
         aliquota_patronal: aliqPat,
+        aliquota_suplementar: parseFloat(form.aliquota_suplementar) || 0,
+        aliquota_juros_servidor: parseFloat(form.aliquota_juros_servidor) || 0,
+        aliquota_juros_patronal: parseFloat(form.aliquota_juros_patronal) || 0,
+        aliquota_correcao_servidor: parseFloat(form.aliquota_correcao_servidor) || 0,
+        aliquota_correcao_patronal: parseFloat(form.aliquota_correcao_patronal) || 0,
         salario_maternidade: parseCurrency(form.salario_maternidade),
         salario_familia: parseCurrency(form.salario_familia),
         aux_doenca: parseCurrency(form.aux_doenca),
-        juros_multa: parseCurrency(form.juros_multa),
         is_13: form.grupo_folha.includes("13"),
         tipo: "folha",
-        paga: form.paga,
       })
       .eq("id", folha.id);
 
@@ -151,7 +151,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     }
     invalidate();
     setEditOpen(false);
-    toast({ title: "Folha atualizada com sucesso!" });
+    toast({ title: "Guia atualizada com sucesso!" });
   };
 
   const handleDelete = async () => {
@@ -170,7 +170,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     }
     invalidate();
     setDeleteOpen(false);
-    toast({ title: "Folha excluída", description: `${folha.centro_custo} - ${folha.mes_referencia}` });
+    toast({ title: "Guia excluída", description: `${folha.centro_custo} - ${folha.mes_referencia}` });
   };
 
   const base = parseCurrency(form.base_calculo);
@@ -178,20 +178,33 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const previewPat = base * ((parseFloat(form.aliquota_patronal) || 0) / 100);
   const valorServidorFinal = servidorManual ? parseCurrency(form.valor_servidor) : previewServ;
   const valorPatronalFinal = patronalManual ? parseCurrency(form.valor_patronal) : previewPat;
+  const preview = calcularValoresGuia({
+    ...folha,
+    valor_servidor: valorServidorFinal,
+    valor_patronal: valorPatronalFinal,
+    valor_suplementar: parseCurrency(form.valor_suplementar),
+    salario_maternidade: parseCurrency(form.salario_maternidade),
+    salario_familia: parseCurrency(form.salario_familia),
+    aux_doenca: parseCurrency(form.aux_doenca),
+    aliquota_juros_servidor: parseFloat(form.aliquota_juros_servidor) || 0,
+    aliquota_juros_patronal: parseFloat(form.aliquota_juros_patronal) || 0,
+    aliquota_correcao_servidor: parseFloat(form.aliquota_correcao_servidor) || 0,
+    aliquota_correcao_patronal: parseFloat(form.aliquota_correcao_patronal) || 0,
+  });
 
   return (
     <>
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Visualizar folha" onClick={() => setViewOpen(true)}>
+        <Button variant="ghost" size="icon" aria-label="Visualizar guia" onClick={() => setViewOpen(true)}>
           <Eye className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Editar folha" onClick={openEdit}>
+        <Button variant="ghost" size="icon" aria-label="Editar guia" onClick={openEdit}>
           <Pencil className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Excluir folha"
+          aria-label="Excluir guia"
           className="text-destructive hover:text-destructive"
           onClick={() => setDeleteOpen(true)}
         >
@@ -203,11 +216,11 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes da Folha</DialogTitle>
+            <DialogTitle>Detalhes da Guia</DialogTitle>
             <DialogDescription>{folha.centro_custo} — {formatMes(folha.mes_referencia)}</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <Info label="Centro de Custo" value={folha.centro_custo} />
+            <Info label="Descrição" value={folha.centro_custo} />
             <Info label="Órgão" value={folha.orgao} />
             <Info label="Mês de Referência" value={formatMes(folha.mes_referencia)} />
             <Info label="Data de Emissão" value={folha.data_emissao ? new Date(folha.data_emissao + "T00:00:00").toLocaleDateString("pt-BR") : "Não informada"} />
@@ -229,10 +242,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 {folha.paga ? "Paga" : "Pendente"}
               </Badge>
             </div>
-            <Info
-              label="Total de Contribuições"
-              value={fmt(Number(folha.valor_servidor) + Number(folha.valor_patronal))}
-            />
+            <Info label="Total devido" value={fmt(calcularValoresGuia(folha).devidoServidor + calcularValoresGuia(folha).devidoPatronal)} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewOpen(false)}>Fechar</Button>
@@ -247,23 +257,19 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Folha</DialogTitle>
-            <DialogDescription>Atualize os dados da folha de pagamento</DialogDescription>
+            <DialogTitle>Editar Guia</DialogTitle>
+            <DialogDescription>Atualize os dados da guia de recolhimento</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="e-centro">Centro de Custo</Label>
-              <Select value={centroValue || undefined} onValueChange={selecionarCentro}>
-                <SelectTrigger id="e-centro">
-                  <SelectValue placeholder={form.centro_custo || "Selecionar centro de custo"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(centros as CentroOpt[]).map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.codigo} - {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Label htmlFor="e-centro">Descrição</Label>
+              <Input id="e-centro" value={form.centro_custo} onChange={(e) => change("centro_custo", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="e-orgao">Órgão pagador</Label>
+              <Select value={form.orgao_id || undefined} onValueChange={selecionarOrgao}>
+                <SelectTrigger id="e-orgao"><SelectValue placeholder={form.orgao || "Selecione o órgão"} /></SelectTrigger>
+                <SelectContent>{orgaos.map((orgao) => <SelectItem key={orgao.id} value={orgao.id}>{orgao.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -287,10 +293,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="e-emp">Nº de Servidores</Label>
-                <Input id="e-emp" type="number" min="0" value={form.num_empregados} onChange={(e) => change("num_empregados", e.target.value)} />
-              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="e-grupo">Grupo Folha</Label>
                 <Select value={form.grupo_folha} onValueChange={(v) => change("grupo_folha", v)}>
@@ -315,10 +317,6 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 <Label htmlFor="e-doenca">Auxílio Doença (R$)</Label>
                 <CurrencyInput id="e-doenca" value={form.aux_doenca} onValueChange={(v) => change("aux_doenca", v)} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="e-juros">Juros / Multa (R$)</Label>
-                <CurrencyInput id="e-juros" value={form.juros_multa} onValueChange={(v) => change("juros_multa", v)} />
-              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -329,6 +327,16 @@ export function FolhaActions({ folha }: { folha: Folha }) {
                 <Label htmlFor="e-aliqp">Alíquota Patronal (%)</Label>
                 <Input id="e-aliqp" type="number" step="0.01" value={form.aliquota_patronal} onChange={(e) => change("aliquota_patronal", e.target.value)} />
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2"><Label htmlFor="e-supl">Contribuição Suplementar (R$)</Label><CurrencyInput id="e-supl" value={form.valor_suplementar} onValueChange={(v) => change("valor_suplementar", v)} /></div>
+              <div className="space-y-2"><Label htmlFor="e-aliq-supl">Alíquota Suplementar (%)</Label><Input id="e-aliq-supl" type="number" min="0" step="0.01" value={form.aliquota_suplementar} onChange={(e) => change("aliquota_suplementar", e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2"><Label htmlFor="e-js">Juros/Multa servidor (%)</Label><Input id="e-js" type="number" min="0" step="0.01" value={form.aliquota_juros_servidor} onChange={(e) => change("aliquota_juros_servidor", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="e-jp">Juros/Multa patronal (%)</Label><Input id="e-jp" type="number" min="0" step="0.01" value={form.aliquota_juros_patronal} onChange={(e) => change("aliquota_juros_patronal", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="e-cs">{caixa?.indice_correcao ?? "Correção"} servidor (%)</Label><Input id="e-cs" type="number" min="0" step="0.01" value={form.aliquota_correcao_servidor} onChange={(e) => change("aliquota_correcao_servidor", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="e-cp">{caixa?.indice_correcao ?? "Correção"} patronal (%)</Label><Input id="e-cp" type="number" min="0" step="0.01" value={form.aliquota_correcao_patronal} onChange={(e) => change("aliquota_correcao_patronal", e.target.value)} /></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -363,16 +371,12 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Contribuição Servidor</p>
-                <p className="text-lg font-bold text-foreground">{fmt(valorServidorFinal)}</p>
+                <p className="text-lg font-bold text-foreground">{fmt(preview.devidoServidor)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Contribuição Patronal</p>
-                <p className="text-lg font-bold text-foreground">{fmt(valorPatronalFinal)}</p>
+                <p className="text-lg font-bold text-foreground">{fmt(preview.devidoPatronal)}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch id="e-paga" checked={form.paga} onCheckedChange={(v) => change("paga", v)} />
-              <Label htmlFor="e-paga">Folha paga</Label>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
@@ -386,9 +390,9 @@ export function FolhaActions({ folha }: { folha: Folha }) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir esta folha?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir esta guia?</AlertDialogTitle>
             <AlertDialogDescription>
-              A folha de <strong>{folha.centro_custo}</strong> ({formatMes(folha.mes_referencia)}) e os
+              A guia de <strong>{folha.centro_custo}</strong> ({formatMes(folha.mes_referencia)}) e os
               pagamentos vinculados serão removidos permanentemente. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

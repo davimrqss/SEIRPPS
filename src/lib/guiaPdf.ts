@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { isoToBR } from "./format";
+import { calcularValoresGuia } from "./guiaCalculations";
 
 export interface GuiaFolha {
   centro_custo: string;
@@ -17,7 +18,10 @@ export interface GuiaFolha {
   salario_familia?: number | string | null;
   aux_doenca?: number | string | null;
   juros_multa?: number | string | null;
-  num_empregados?: number | null;
+  aliquota_juros_servidor?: number | string | null;
+  aliquota_juros_patronal?: number | string | null;
+  aliquota_correcao_servidor?: number | string | null;
+  aliquota_correcao_patronal?: number | string | null;
   grupo_folha?: string | null;
   aliquota_servidor: number | string;
   aliquota_patronal: number | string;
@@ -38,6 +42,7 @@ export interface GuiaCaixa {
   uf?: string | null;
   estado?: string | null;
   logo_url?: string | null;
+  indice_correcao?: string | null;
 }
 
 const n = (v: unknown) => Number(v ?? 0) || 0;
@@ -127,9 +132,8 @@ export function buildGuiaPDF(
   const patronal = n(folha.valor_patronal);
   const suplementar = n(folha.valor_suplementar);
   const deducoes = n(folha.salario_maternidade) + n(folha.salario_familia) + n(folha.aux_doenca);
-  const juros = n(folha.juros_multa);
   const somaPatronal = patronal + suplementar;
-  const pagarPatronal = somaPatronal - deducoes + juros;
+  const calc = calcularValoresGuia(folha as Parameters<typeof calcularValoresGuia>[0]);
   const decimo = folha.is_13 ? "Sim" : "Não";
   const comp = competencia(folha.mes_referencia);
   const emissao = folha.data_emissao ? isoToBR(folha.data_emissao).replace(/-/g, "/") : "-";
@@ -199,8 +203,7 @@ export function buildGuiaPDF(
     { label: "RAZÃO SOCIAL", value: razao },
     { label: "CNPJ", value: caixa.cnpj || "-" },
     { label: "ÓRGÃO PAGADOR", value: folha.orgao || "-" },
-    { label: "CENTRO DE CUSTO", value: folha.centro_custo || "-" },
-    { label: "QTD. DE SERVIDORES", value: String(folha.num_empregados ?? 0) },
+    { label: "DESCRIÇÃO", value: folha.centro_custo || "-" },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
     { label: "13°", value: decimo },
@@ -213,9 +216,9 @@ export function buildGuiaPDF(
     { label: "ALÍQUOTA", value: aliq(n(folha.aliquota_servidor), servidor) },
     { label: "SERVIDOR", value: brl(servidor) },
     { label: "TOTAL DA CONTRIBUIÇÃO", value: brl(servidor) },
-    { label: "JUROS / MULTA", value: brl(0) },
-    { label: "CORREÇÃO (INPC)", value: brl(0) },
-    { label: "VALOR A SER PAGO", value: brl(servidor) },
+    { label: "JUROS / MULTA", value: brl(calc.jurosServidor) },
+    { label: `CORREÇÃO (${caixa.indice_correcao || "INPC"})`, value: brl(calc.correcaoServidor) },
+    { label: "VALOR A SER PAGO", value: brl(calc.devidoServidor) },
   ];
 
   y = drawSection("GUIA SERVIDOR", servidorLeft, servidorRight, y) + 20;
@@ -225,7 +228,7 @@ export function buildGuiaPDF(
     { label: "RAZÃO SOCIAL", value: razao },
     { label: "CNPJ", value: caixa.cnpj || "-" },
     { label: "ÓRGÃO PAGADOR", value: folha.orgao || "-" },
-    { label: "CENTRO DE CUSTO", value: folha.centro_custo || "-" },
+    { label: "DESCRIÇÃO", value: folha.centro_custo || "-" },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
     { label: "13°", value: decimo },
@@ -240,15 +243,15 @@ export function buildGuiaPDF(
     { label: "SOMA PATRONAL E SUPLEMENTAR", value: brl(somaPatronal) },
     { label: "DEDUÇÕES", value: brl(deducoes) },
     { label: "TOTAL DA CONTRIBUIÇÃO", value: brl(somaPatronal - deducoes) },
-    { label: "JUROS / MULTA", value: brl(juros) },
-    { label: "CORREÇÃO (INPC)", value: brl(0) },
-    { label: "VALOR A SER PAGO", value: brl(pagarPatronal) },
+    { label: "JUROS / MULTA", value: brl(calc.jurosPatronal) },
+    { label: `CORREÇÃO (${caixa.indice_correcao || "INPC"})`, value: brl(calc.correcaoPatronal) },
+    { label: "VALOR A SER PAGO", value: brl(calc.devidoPatronal) },
   ];
 
   y = drawSection("GUIA PATRONAL", patronalLeft, patronalRight, y) + 20;
 
   // ---------- Total geral ----------
-  const total = pagarPatronal + servidor;
+  const total = calc.devidoPatronal + calc.devidoServidor;
   const boxW = 190;
   doc.rect(R - boxW, y + 12, boxW, 22);
   text("Total:", R - boxW + 10, y + 27, { bold: true, size: 10 });
