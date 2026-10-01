@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setActiveCaixaId = useCallback((id: string) => {
     localStorage.setItem(STORAGE_KEY, id);
     setAdminCaixaId(id);
-  };
+  }, []);
 
   // Só admins podem alternar de caixa; os outros ficam presos à caixa do perfil.
   const activeCaixaId = isAdmin ? adminCaixaId ?? profile?.caixa_id ?? null : profile?.caixa_id ?? null;
