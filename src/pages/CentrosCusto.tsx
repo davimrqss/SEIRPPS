@@ -149,10 +149,10 @@ export default function CentrosCusto() {
                       {canEditCentrosCusto && (
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" aria-label="Editar centro de custo" onClick={() => openEdit(c)}>
+                            <Button variant="ghost" size="icon" aria-label="Editar descrição" onClick={() => openEdit(c)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" aria-label="Excluir centro de custo"
+                            <Button variant="ghost" size="icon" aria-label="Excluir descrição"
                               className="text-destructive hover:text-destructive" onClick={() => setRemoving(c)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -182,7 +182,7 @@ export default function CentrosCusto() {
             <div className="space-y-2">
               <Label htmlFor="cc-nome">Nome *</Label>
               <Input id="cc-nome" required value={form.nome} onChange={(e) => set("nome", e.target.value)}
-                placeholder="Ex: Secretaria de Educação" />
+                placeholder="Ex: Manutenção da Educação" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="cc-orgao">Órgão</Label>
