@@ -24,3 +24,8 @@
 - [x] Adicionar filtros e saldos separados ao dashboard.
 - [x] Criar panorama mensal por órgão, total anual e exportação em PDF.
 - [ ] Validar migração, permissões, responsividade e PDFs.
+- [ ] Simplificar Dashboard e Guias de Recolhimento para um único valor por parte, alternando entre Devido e Pago.
+- [ ] Adicionar gráficos de colunas e pizza ao Dashboard.
+- [ ] Concluir a transformação de Centros de Custo em Descrições independentes de órgãos.
+- [ ] Corrigir falhas atuais de interface e atualizar o Preview.
+- [ ] Auditar e corrigir RLS, autenticação, segredos, validação, dependências e mensagens de erro.
