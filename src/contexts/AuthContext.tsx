@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -78,14 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const hasRole = (role: AppRole) => roles.includes(role);
+  const hasRole = useCallback((role: AppRole) => roles.includes(role), [roles]);
   const isAdmin = roles.includes("admin");
 
   const refreshProfile = async () => {
     if (user) await fetchProfileAndRoles(user.id);
   };
 
-  const setActiveCaixaId = (id: string) => {
+  const setActiveCaixaId = useCallback((id: string) => {
     localStorage.setItem(STORAGE_KEY, id);
     setAdminCaixaId(id);
   };
