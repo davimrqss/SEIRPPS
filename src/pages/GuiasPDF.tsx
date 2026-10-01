@@ -83,6 +83,38 @@ export default function GuiasPDF() {
   </div>;
 }
 
-function ResumoParte({ nome, devido, pago, saldo, status }: { nome: string; devido: number; pago: number; saldo: number; status: string }) {
-  return <div className="space-y-1 rounded-md border border-border p-3 text-sm"><div className="flex items-center justify-between"><strong>{nome}</strong><Badge className={statusClass(status)}>{statusLabel(status)}</Badge></div><p className="text-muted-foreground">Devido: <span className="font-medium text-foreground">{fmtBRL(devido)}</span></p><p className="text-muted-foreground">Pago: <span className="font-medium text-foreground">{fmtBRL(pago)}</span></p><p className="text-muted-foreground">Saldo: <span className="font-semibold text-foreground">{fmtBRL(saldo)}</span></p></div>;
+function ResumoParte({
+  nome,
+  pago,
+  saldo,
+  status,
+}: {
+  nome: string;
+  devido: number;
+  pago: number;
+  saldo: number;
+  status: string;
+}) {
+  const quitado = status === "pago";
+  const tituloValor = quitado ? "Pago" : "Devido";
+  const valorExibido = quitado ? pago : saldo;
+
+  return (
+    <div className="space-y-2 rounded-md border border-border p-3 text-sm">
+      <div className="flex items-center justify-between">
+        <strong>{nome}</strong>
+
+        <Badge className={statusClass(status)}>
+          {statusLabel(status)}
+        </Badge>
+      </div>
+
+      <p className="text-muted-foreground">
+        {tituloValor}:{" "}
+        <span className="font-semibold text-foreground">
+          {fmtBRL(valorExibido)}
+        </span>
+      </p>
+    </div>
+  );
 }
