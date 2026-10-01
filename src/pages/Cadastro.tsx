@@ -362,8 +362,6 @@ export default function Cadastro() {
                   </SelectContent>
                 </Select>
 
-                {form.role === "admin" && (
-                )}
               </div>
 
               <div className="flex justify-end pt-2 md:col-span-2">
