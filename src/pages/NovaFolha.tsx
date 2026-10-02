@@ -19,8 +19,17 @@ import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
 import { calcularValoresGuia } from "@/lib/guiaCalculations";
 import { buildGuiaPDF, urlToDataUrl } from "@/lib/guiaPdf";
 import type { Tables } from "@/integrations/supabase/types";
+import { z } from "zod";
+import { safeErrorMessage } from "@/lib/safeError";
 
 type Guia = Tables<"folhas_pagamento">;
+
+const GuiaSchema = z.object({
+  descricao: z.string().trim().min(1).max(200),
+  orgaoId: z.string().uuid(),
+  dataEmissao: z.string().date(),
+  vencimento: z.string().date(),
+});
 
 export type CentroOpt = { id: string; nome: string; codigo: string | null; orgaos?: { nome: string } | null };
 
@@ -79,7 +88,7 @@ export default function NovaFolha() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!activeCaixaId || !form.descricao.trim() || !form.orgaoId || !form.dataEmissao || !form.vencimento) {
+    if (!activeCaixaId || !GuiaSchema.safeParse(form).success) {
       toast({ title: "Preencha os campos obrigatórios", description: "Descrição, órgão e datas são obrigatórios.", variant: "destructive" });
       return;
     }
@@ -113,7 +122,7 @@ export default function NovaFolha() {
     const { data: guia, error } = await supabase.from("folhas_pagamento").insert(payload).select().single();
     if (error || !guia) {
       popup?.close(); setLoading(false);
-      toast({ title: "Erro ao cadastrar guia", description: error?.message, variant: "destructive" });
+      toast({ title: "Erro ao cadastrar guia", description: safeErrorMessage("Não foi possível cadastrar a guia"), variant: "destructive" });
       return;
     }
     if (salvarDescricao) {
@@ -146,7 +155,7 @@ export default function NovaFolha() {
     <div><Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/guias")}><ArrowLeft className="h-4 w-4 mr-1" />Guias de Recolhimento</Button><h1 className="text-2xl font-bold text-foreground">Cadastrar Guia</h1><p className="text-muted-foreground mt-1">Informe os dados previdenciários e, se desejar, os pagamentos já realizados.</p></div>
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card><CardHeader><CardTitle className="text-base">Identificação da guia</CardTitle></CardHeader><CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label htmlFor="descricao">Descrição *</Label><Input id="descricao" list="descricoes-cadastradas" value={form.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Digite ou selecione uma descrição" /><datalist id="descricoes-cadastradas">{descricoes.map((item) => <option key={item.id} value={item.nome} />)}</datalist><div className="flex items-center gap-2"><Checkbox id="salvar-descricao" checked={salvarDescricao} onCheckedChange={(value) => setSalvarDescricao(value === true)} /><Label htmlFor="salvar-descricao" className="font-normal">Cadastrar esta descrição para reutilizar</Label></div></div><div className="space-y-2"><Label>Órgão pagador *</Label><Select value={form.orgaoId} onValueChange={(value) => set("orgaoId", value)}><SelectTrigger><SelectValue placeholder="Selecione o órgão" /></SelectTrigger><SelectContent>{orgaos.map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent></Select></div></div>
+        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label htmlFor="descricao">Descrição *</Label><Input id="descricao" list="descricoes-cadastradas" maxLength={200} value={form.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Digite ou selecione uma descrição" /><datalist id="descricoes-cadastradas">{descricoes.map((item) => <option key={item.id} value={item.nome} />)}</datalist><div className="flex items-center gap-2"><Checkbox id="salvar-descricao" checked={salvarDescricao} onCheckedChange={(value) => setSalvarDescricao(value === true)} /><Label htmlFor="salvar-descricao" className="font-normal">Cadastrar esta descrição para reutilizar</Label></div></div><div className="space-y-2"><Label>Órgão pagador *</Label><Select value={form.orgaoId} onValueChange={(value) => set("orgaoId", value)}><SelectTrigger><SelectValue placeholder="Selecione o órgão" /></SelectTrigger><SelectContent>{orgaos.map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent></Select></div></div>
         <div className="grid gap-4 md:grid-cols-3"><div className="space-y-2"><Label>Data de emissão *</Label><DateField value={form.dataEmissao} onChange={(value) => set("dataEmissao", value)} /></div><div className="space-y-2"><Label>Vencimento *</Label><DateField value={form.vencimento} onChange={(value) => set("vencimento", value)} /></div><div className="space-y-2"><Label>Grupo</Label><Select value={form.grupoFolha} onValueChange={(value) => set("grupoFolha", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1 - Normal">Normal</SelectItem><SelectItem value="2 - 13° Salário">13° Salário</SelectItem></SelectContent></Select></div></div>
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-base">Contribuições</CardTitle></CardHeader><CardContent className="space-y-5">
