@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PermissionRoute } from "@/components/PermissionRoute";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import NovaFolha from "./pages/NovaFolha";
@@ -45,14 +46,14 @@ const App = () => (
               <Route path="/folhas" element={<Navigate to="/guias" replace />} />
               <Route path="/folhas/nova" element={<Navigate to="/guias/cadastrar" replace />} />
               <Route path="/folhas/importar" element={<Navigate to="/guias/cadastrar" replace />} />
-              <Route path="/guias/cadastrar" element={<NovaFolha />} />
+              <Route path="/guias/cadastrar" element={<PermissionRoute permission="editarGuias"><NovaFolha /></PermissionRoute>} />
               <Route path="/guias" element={<GuiasPDF />} />
-              <Route path="/guias/:folhaId/pagamento" element={<LancarPagamento />} />
-              <Route path="/caixas" element={<Caixas />} />
-              <Route path="/caixas/:id" element={<CaixaEditar />} />
-              <Route path="/orgaos" element={<Orgaos />} />
-              <Route path="/centros-custo" element={<CentrosCusto />} />
-              <Route path="/cadastro" element={<Cadastro />} />
+              <Route path="/guias/:folhaId/pagamento" element={<PermissionRoute permission="editarGuias"><LancarPagamento /></PermissionRoute>} />
+              <Route path="/caixas" element={<PermissionRoute permission="admin"><Caixas /></PermissionRoute>} />
+              <Route path="/caixas/:id" element={<PermissionRoute permission="admin"><CaixaEditar /></PermissionRoute>} />
+              <Route path="/orgaos" element={<PermissionRoute permission="cadastros"><Orgaos /></PermissionRoute>} />
+              <Route path="/centros-custo" element={<PermissionRoute permission="cadastros"><CentrosCusto /></PermissionRoute>} />
+              <Route path="/cadastro" element={<PermissionRoute permission="admin"><Cadastro /></PermissionRoute>} />
               <Route path="/minha-conta" element={<MinhaConta />} />
             </Route>
             <Route path="*" element={<NotFound />} />

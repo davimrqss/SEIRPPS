@@ -24,6 +24,7 @@ import { useOrgaos } from "@/hooks/useCadastros";
 import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { calcularValoresGuia } from "@/lib/guiaCalculations";
 import type { Tables } from "@/integrations/supabase/types";
+import { safeErrorMessage } from "@/lib/safeError";
 
 type Folha = Tables<"folhas_pagamento">;
 
@@ -144,7 +145,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
 
     setLoading(false);
     if (error) {
-      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao atualizar", description: safeErrorMessage("Não foi possível atualizar a guia"), variant: "destructive" });
       return;
     }
     invalidate();
@@ -157,13 +158,13 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     const { error: pagError } = await supabase.from("pagamentos").delete().eq("folha_id", folha.id);
     if (pagError) {
       setLoading(false);
-      toast({ title: "Erro ao excluir", description: pagError.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir", description: safeErrorMessage("Não foi possível excluir a guia"), variant: "destructive" });
       return;
     }
     const { error } = await supabase.from("folhas_pagamento").delete().eq("id", folha.id);
     setLoading(false);
     if (error) {
-      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir", description: safeErrorMessage("Não foi possível excluir a guia"), variant: "destructive" });
       return;
     }
     invalidate();
@@ -261,7 +262,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="e-centro">Descrição</Label>
-              <Input id="e-centro" value={form.centro_custo} onChange={(e) => change("centro_custo", e.target.value)} required />
+              <Input id="e-centro" maxLength={200} value={form.centro_custo} onChange={(e) => change("centro_custo", e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="e-orgao">Órgão pagador</Label>

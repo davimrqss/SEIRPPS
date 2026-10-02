@@ -9,10 +9,11 @@ export function useCaixaAtiva() {
   return useQuery({
     queryKey: ["caixa", activeCaixaId],
     queryFn: async () => {
+      if (!activeCaixaId) return null;
       const { data, error } = await supabase
         .from("caixas_previdencia")
         .select("*")
-        .eq("id", activeCaixaId!)
+        .eq("id", activeCaixaId)
         .maybeSingle();
       if (error) throw error;
       return data;

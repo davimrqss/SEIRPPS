@@ -15,13 +15,13 @@ export function CaixaSwitcher() {
   const { isAdmin, activeCaixaId, setActiveCaixaId } = useAuth();
   const { data: caixas = [] } = useCaixas();
 
-  if (!isAdmin) return null;
-
   useEffect(() => {
     if (isAdmin && !activeCaixaId && caixas.length > 0) {
       setActiveCaixaId(caixas[0].id);
     }
   }, [isAdmin, activeCaixaId, caixas, setActiveCaixaId]);
+
+  if (!isAdmin) return null;
   
   return (
     <div className="px-4 pb-3">
