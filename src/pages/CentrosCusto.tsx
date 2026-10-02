@@ -7,6 +7,9 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -15,38 +18,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useQuery } from "@tanstack/react-query";
+import { useCentrosCusto, useOrgaos } from "@/hooks/useCadastros";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
-import { safeErrorMessage } from "@/lib/safeError";
 
-type DescricaoGuia = Tables<"descricoes_guias">;
+type CentroCusto = Tables<"centros_custo"> & { orgaos?: { nome: string } | null };
 
-const empty = { nome: "" };
+const empty = { nome: "", codigo: "", descricao: "", orgao_id: "" };
 
 export default function CentrosCusto() {
   const { activeCaixaId } = useAuth();
   const { canEditCentrosCusto } = usePermissions();
   const queryClient = useQueryClient();
-  const { data: descricoes = [], isLoading } = useQuery({
-    queryKey: ["descricoes-guias", activeCaixaId],
-    queryFn: async () => {
-      if (!activeCaixaId) return [];
-      const { data, error } = await supabase
-        .from("descricoes_guias")
-        .select("*")
-        .eq("caixa_id", activeCaixaId)
-        .order("nome");
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: Boolean(activeCaixaId),
-  });
+  const { data: centros = [], isLoading } = useCentrosCusto();
+  const { data: orgaos = [] } = useOrgaos();
 
   const [busca, setBusca] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<DescricaoGuia | null>(null);
-  const [removing, setRemoving] = useState<DescricaoGuia | null>(null);
+  const [editing, setEditing] = useState<CentroCusto | null>(null);
+  const [removing, setRemoving] = useState<CentroCusto | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
@@ -54,13 +44,16 @@ export default function CentrosCusto() {
 
   const openNovo = () => { setEditing(null); setForm(empty); setDialogOpen(true); };
 
-  const openEdit = (c: DescricaoGuia) => {
+  const openEdit = (c: CentroCusto) => {
     setEditing(c);
-    setForm({ nome: c.nome });
+    setForm({
+      nome: c.nome ?? "", codigo: c.codigo ?? "",
+      descricao: c.descricao ?? "", orgao_id: c.orgao_id ?? "",
+    });
     setDialogOpen(true);
   };
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["descricoes-guias"] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["centros-custo"] });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,19 +62,18 @@ export default function CentrosCusto() {
       return;
     }
     setSaving(true);
-    const nome = form.nome.trim();
-    if (!nome || nome.length > 200) {
-      toast.error("Informe uma descrição com até 200 caracteres.");
-      setSaving(false);
-      return;
-    }
-    const payload = { nome };
+    const payload = {
+      nome: form.nome,
+      codigo: form.codigo,
+      descricao: form.descricao || null,
+      orgao_id: form.orgao_id || null,
+    };
     const { error } = editing
-      ? await supabase.from("descricoes_guias").update(payload).eq("id", editing.id)
-      : await supabase.from("descricoes_guias").insert({ ...payload, caixa_id: activeCaixaId });
+      ? await supabase.from("centros_custo").update(payload).eq("id", editing.id)
+      : await supabase.from("centros_custo").insert({ ...payload, caixa_id: activeCaixaId });
     setSaving(false);
     if (error) {
-      toast.error(safeErrorMessage("Não foi possível salvar a descrição"));
+      toast.error("Erro ao salvar: " + error.message);
       return;
     }
     invalidate();
@@ -91,9 +83,9 @@ export default function CentrosCusto() {
 
   const handleDelete = async () => {
     if (!removing) return;
-    const { error } = await supabase.from("descricoes_guias").delete().eq("id", removing.id);
+    const { error } = await supabase.from("centros_custo").delete().eq("id", removing.id);
     if (error) {
-      toast.error(safeErrorMessage("Não foi possível excluir a descrição"));
+      toast.error("Erro ao excluir: " + error.message);
       return;
     }
     invalidate();
@@ -101,8 +93,10 @@ export default function CentrosCusto() {
     toast.success("Descrição excluída.");
   };
 
-  const filtrados = (descricoes as DescricaoGuia[]).filter((item) =>
-    item.nome.toLowerCase().includes(busca.trim().toLowerCase()),
+  const filtrados = (centros as CentroCusto[]).filter(
+    (c) =>
+      c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      c.codigo.toLowerCase().includes(busca.toLowerCase())
   );
 
   return (
@@ -120,7 +114,7 @@ export default function CentrosCusto() {
         <CardHeader>
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar descrição..." maxLength={200} className="pl-9"
+            <Input placeholder="Buscar por nome ou código..." className="pl-9"
               value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
         </CardHeader>
@@ -129,6 +123,9 @@ export default function CentrosCusto() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Código</th>
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Nome</th>
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Órgão</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Descrição</th>
                   {canEditCentrosCusto && (
                     <th className="text-center py-3 px-4 font-medium text-muted-foreground">Ações</th>
@@ -137,15 +134,18 @@ export default function CentrosCusto() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={2} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
                 ) : filtrados.length === 0 ? (
-                  <tr><td colSpan={2} className="py-12 text-center text-muted-foreground">
+                  <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">
                     <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />Nenhuma descrição cadastrada
                   </td></tr>
                 ) : (
                   filtrados.map((c) => (
                     <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{c.codigo}</td>
                       <td className="py-3 px-4 font-medium text-foreground">{c.nome}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{c.orgaos?.nome ?? "—"}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{c.descricao}</td>
                       {canEditCentrosCusto && (
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-1">
@@ -173,15 +173,35 @@ export default function CentrosCusto() {
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Descrição" : "Nova Descrição"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="space-y-4">
+          <form onSubmit={handleSave} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="descricao-nome">Descrição *</Label>
-              <Input id="descricao-nome" required maxLength={200} value={form.nome} onChange={(e) => set("nome", e.target.value)}
-                placeholder="Ex: Folha mensal" />
+              <Label htmlFor="cc-cod">Código *</Label>
+              <Input id="cc-cod" required value={form.codigo} onChange={(e) => set("codigo", e.target.value)}
+                placeholder="Ex: 001" />
             </div>
-            <DialogFooter>
+            <div className="space-y-2">
+              <Label htmlFor="cc-nome">Nome *</Label>
+              <Input id="cc-nome" required value={form.nome} onChange={(e) => set("nome", e.target.value)}
+                placeholder="Ex: Manutenção da Educação" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="cc-orgao">Órgão</Label>
+              <Select value={form.orgao_id || undefined} onValueChange={(v) => set("orgao_id", v)}>
+                <SelectTrigger id="cc-orgao"><SelectValue placeholder="Selecionar órgão" /></SelectTrigger>
+                <SelectContent>
+                  {orgaos.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="cc-desc">Observação</Label>
+              <Input id="cc-desc" value={form.descricao} onChange={(e) => set("descricao", e.target.value)} />
+            </div>
+            <DialogFooter className="md:col-span-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving || !form.nome.trim()}>
+              <Button type="submit" disabled={saving || !form.nome || !form.codigo}>
                 {saving ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
