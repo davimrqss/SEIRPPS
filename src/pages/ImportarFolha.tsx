@@ -68,7 +68,7 @@ export default function ImportarFolha() {
         setStatus(`Analisando lote ${index + 1} de ${batches.length} com o Google Gemini...`);
         setProgress(80 + Math.round(((index + 1) / batches.length) * 18));
         const { data, error: functionError } = await supabase.functions.invoke("analyze-payroll-pdf", { body: { pages: batches[index] } });
-        if (functionError) throw new Error((data as { error?: string } | null)?.error || functionError.message);
+        if (functionError) throw new Error((data as { error?: string } | null)?.error || "Não foi possível analisar este lote.");
         for (const row of (data as { rows?: AiRow[] })?.rows ?? []) {
           const key = row.codigo_centro_custo.trim() || normalize(row.centro_custo);
           if (key && !consolidated.has(key)) consolidated.set(key, row);
@@ -92,7 +92,11 @@ export default function ImportarFolha() {
       }));
        setProgress(100); setStatus(`${aiRows.length} centros encontrados em ${extraction.pageCount} páginas pelo Google Gemini.`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Não foi possível analisar o PDF.");
+      const safeMessages = [
+        "A análise terminou sem encontrar centros de custo.",
+        "Não foi possível analisar este lote.",
+      ];
+      setError(caught instanceof Error && safeMessages.includes(caught.message) ? caught.message : "Não foi possível analisar o PDF. Tente novamente.");
       setStatus(""); setProgress(0);
     }
   };

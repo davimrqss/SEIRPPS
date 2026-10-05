@@ -31,7 +31,7 @@ export default function Login() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+      toast({ title: "Não foi possível entrar", description: "Confira seu e-mail e sua senha e tente novamente.", variant: "destructive" });
     }
     setLoading(false);
   };

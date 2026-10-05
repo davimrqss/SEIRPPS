@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
+import { safeErrorMessage } from "@/lib/safeError";
 
 export default function Caixas() {
   const { canEditCaixasEOrgaos } = usePermissions();
@@ -43,7 +44,7 @@ export default function Caixas() {
       .single();
     setCriando(false);
     if (error) {
-      toast.error("Erro ao criar: " + error.message);
+      toast.error(safeErrorMessage("Não foi possível criar a caixa"));
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["caixas-lista"] });
@@ -82,8 +83,8 @@ export default function Caixas() {
       queryClient.invalidateQueries({ queryKey: ["caixa"] });
       setRemovendo(null);
       toast.success("Caixa de previdência excluída.");
-    } catch (err) {
-      toast.error("Erro ao excluir: " + (err as Error).message);
+    } catch {
+      toast.error(safeErrorMessage("Não foi possível excluir a caixa"));
     } finally {
       setExcluindo(false);
     }

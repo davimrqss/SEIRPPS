@@ -34,9 +34,10 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "").trim();
     if (!token) return json({ error: "Não autenticado" }, 401);
 
-    const url = Deno.env.get("SUPABASE_URL")!;
-    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const url = Deno.env.get("SUPABASE_URL");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !anon || !service) return json({ error: "O cadastro de contas não está configurado." }, 500);
 
     const userClient = createClient(url, anon, {
       global: { headers: { Authorization: `Bearer ${token}` } },
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
       user_metadata: { nome },
     });
     if (createErr || !created.user) {
-      return json({ error: createErr?.message ?? "Falha ao criar usuário" }, 400);
+      return json({ error: "Não foi possível criar a conta. Verifique se o e-mail já está em uso e se a senha atende aos requisitos." }, 400);
     }
 
     const newUserId = created.user.id;
@@ -78,15 +79,15 @@ Deno.serve(async (req) => {
         { user_id: newUserId, nome, caixa_id : role === "admin" ? null : caixa_id, cargo: cargo ?? null },
         { onConflict: "user_id" },
       );
-    if (profErr) return json({ error: profErr.message }, 500);
+    if (profErr) return json({ error: "Não foi possível concluir o perfil da conta." }, 500);
 
     const { error: roleInsErr } = await admin
       .from("user_roles")
       .insert({ user_id: newUserId, role });
-    if (roleInsErr) return json({ error: roleInsErr.message }, 500);
+    if (roleInsErr) return json({ error: "Não foi possível concluir as permissões da conta." }, 500);
 
     return json({ user_id: newUserId, email });
-  } catch (e) {
-    return json({ error: e instanceof Error ? e.message : "Erro inesperado" }, 500);
+  } catch {
+    return json({ error: "Não foi possível concluir o cadastro da conta." }, 500);
   }
 });
