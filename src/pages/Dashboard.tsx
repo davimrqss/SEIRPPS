@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCaixaAtiva } from "@/hooks/useCaixa";
@@ -14,6 +16,16 @@ import { resumirPagamentos } from "@/lib/guiaCalculations";
 import { downloadRelatorioMensal, type LinhaRelatorio } from "@/lib/relatorioPdf";
 
 const mesBR = (mes: string) => new Date(`${mes}-01T00:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+const barConfig = {
+  servidor: { label: "Servidor", color: "hsl(var(--primary))" },
+  patronal: { label: "Patronal", color: "hsl(var(--accent))" },
+} satisfies ChartConfig;
+
+const pieConfig = {
+  pago: { label: "Pago", color: "hsl(var(--success))" },
+  pendente: { label: "Pendente", color: "hsl(var(--warning))" },
+} satisfies ChartConfig;
 
 export default function Dashboard() {
   const { activeCaixaId } = useAuth();
@@ -65,6 +77,25 @@ export default function Dashboard() {
     });
     return [...grupos.values()].sort((a, b) => b.mes.localeCompare(a.mes) || a.orgao.localeCompare(b.orgao));
   }, [resumos]);
+
+  const colunas = useMemo(() => {
+    const porMes = new Map<string, { mes: string; servidor: number; patronal: number }>();
+    relatorio.forEach((linha) => {
+      const atual = porMes.get(linha.mes) ?? { mes: linha.mes, servidor: 0, patronal: 0 };
+      atual.servidor += linha.saldoServidor <= 0.009 ? linha.pagoServidor : linha.saldoServidor;
+      atual.patronal += linha.saldoPatronal <= 0.009 ? linha.pagoPatronal : linha.saldoPatronal;
+      porMes.set(linha.mes, atual);
+    });
+    return [...porMes.values()].sort((a, b) => a.mes.localeCompare(b.mes)).map((item) => ({
+      ...item,
+      label: mesBR(item.mes).replace(" de ", "/"),
+    }));
+  }, [relatorio]);
+
+  const pizza = useMemo(() => [
+    { status: "pago", valor: total.pagoServidor + total.pagoPatronal, fill: "var(--color-pago)" },
+    { status: "pendente", valor: total.saldoServidor + total.saldoPatronal, fill: "var(--color-pendente)" },
+  ].filter((item) => item.valor > 0.009), [total]);
 
   if (isLoading) return <div className="py-20 text-center text-muted-foreground">Carregando...</div>;
 const servidorQuitado = total.saldoServidor <= 0.009;
@@ -153,6 +184,55 @@ return (
           </CardContent>
         </Card>
       ))}
+    </div>
+
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Servidor e patronal por mês</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {colunas.length ? (
+            <ChartContainer config={barConfig} className="h-72 w-full">
+              <BarChart data={colunas} accessibilityLayer margin={{ left: 8, right: 8 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `R$ ${Number(value).toLocaleString("pt-BR", { notation: "compact" })}`} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value) => fmtBRL(Number(value))} />} />
+                <Bar dataKey="servidor" fill="var(--color-servidor)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="patronal" fill="var(--color-patronal)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <p className="py-20 text-center text-muted-foreground">Sem dados para exibir.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Distribuição dos valores</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pizza.length ? (
+            <ChartContainer config={pieConfig} className="h-72 w-full">
+              <PieChart accessibilityLayer>
+                <ChartTooltip content={<ChartTooltipContent hideLabel formatter={(value, name) => (
+                  <div className="flex min-w-36 items-center justify-between gap-3">
+                    <span>{pieConfig[name as keyof typeof pieConfig]?.label}</span>
+                    <span className="font-mono font-medium tabular-nums">{fmtBRL(Number(value))}</span>
+                  </div>
+                )} />} />
+                <Pie data={pizza} dataKey="valor" nameKey="status" innerRadius={58} outerRadius={92} paddingAngle={2}>
+                  {pizza.map((item) => <Cell key={item.status} fill={item.fill} />)}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+          ) : (
+            <p className="py-20 text-center text-muted-foreground">Sem dados para exibir.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
 
     <Card>

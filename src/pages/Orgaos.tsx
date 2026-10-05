@@ -19,6 +19,7 @@ import { useOrgaos } from "@/hooks/useCadastros";
 import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { safeErrorMessage } from "@/lib/safeError";
 
 type Orgao = Tables<"orgaos">;
 
@@ -81,7 +82,7 @@ export default function Orgaos() {
       : await supabase.from("orgaos").insert({ ...payload, caixa_id: activeCaixaId });
     setSaving(false);
     if (error) {
-      toast.error("Erro ao salvar: " + error.message);
+      toast.error(safeErrorMessage("Não foi possível salvar o órgão"));
       return;
     }
     invalidate();
@@ -93,7 +94,7 @@ export default function Orgaos() {
     if (!removing) return;
     const { error } = await supabase.from("orgaos").delete().eq("id", removing.id);
     if (error) {
-      toast.error("Erro ao excluir: " + error.message);
+      toast.error(safeErrorMessage("Não foi possível excluir o órgão"));
       return;
     }
     invalidate();

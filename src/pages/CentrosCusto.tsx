@@ -21,6 +21,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useCentrosCusto, useOrgaos } from "@/hooks/useCadastros";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { safeErrorMessage } from "@/lib/safeError";
 
 type CentroCusto = Tables<"centros_custo"> & { orgaos?: { nome: string } | null };
 
@@ -73,7 +74,7 @@ export default function CentrosCusto() {
       : await supabase.from("centros_custo").insert({ ...payload, caixa_id: activeCaixaId });
     setSaving(false);
     if (error) {
-      toast.error("Erro ao salvar: " + error.message);
+      toast.error(safeErrorMessage("Não foi possível salvar a descrição"));
       return;
     }
     invalidate();
@@ -85,7 +86,7 @@ export default function CentrosCusto() {
     if (!removing) return;
     const { error } = await supabase.from("centros_custo").delete().eq("id", removing.id);
     if (error) {
-      toast.error("Erro ao excluir: " + error.message);
+      toast.error(safeErrorMessage("Não foi possível excluir a descrição"));
       return;
     }
     invalidate();

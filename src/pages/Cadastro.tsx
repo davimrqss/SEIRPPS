@@ -115,11 +115,7 @@ export default function Cadastro() {
 
       if (error) throw error;
 
-      if ((data as { error?: unknown })?.error) {
-        throw new Error(
-          JSON.stringify((data as { error: unknown }).error),
-        );
-      }
+      if ((data as { error?: unknown })?.error) throw new Error("CREATE_ACCOUNT_FAILED");
     },
 
     onSuccess: () => {
@@ -144,8 +140,8 @@ export default function Cadastro() {
       });
     },
 
-    onError: (error: Error) => {
-      toast.error("Erro ao criar conta: " + error.message);
+    onError: () => {
+      toast.error("Não foi possível criar a conta. Confira os dados e tente novamente.");
     },
   });
 

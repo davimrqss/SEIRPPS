@@ -3,7 +3,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod";
 
 const BodySchema = z.object({
-  pages: z.array(z.string().min(1).max(14_000)).min(1).max(8),
+  pages: z.array(z.string().min(1).max(10_000)).min(1).max(5),
 });
 
 const RowSchema = z.object({
@@ -95,15 +95,14 @@ async function callGemini(apiKey: string, pages: string[], signal: AbortSignal) 
         ? "A chave do Google AI não foi aceita. Verifique a chave e as permissões no Google AI Studio."
         : response.status === 429
           ? "O limite temporário da API do Google foi atingido. Aguarde e tente novamente."
-          : payload?.error?.message || "O Google Gemini não conseguiu analisar este lote.";
+          : "O Google Gemini não conseguiu analisar este lote.";
       throw Object.assign(new Error(safeMessage), { statusCode: response.status });
     }
 
     const candidate = payload?.candidates?.[0];
     const text = candidate?.content?.parts?.map((part) => part.text ?? "").join("").trim();
     if (!text) {
-      const reason = payload?.promptFeedback?.blockReason || candidate?.finishReason;
-      throw Object.assign(new Error(reason ? `A análise foi interrompida pelo Google: ${reason}.` : "O Gemini não retornou dados para este lote."), { statusCode: 422 });
+      throw Object.assign(new Error("O Gemini não retornou dados para este lote."), { statusCode: 422 });
     }
 
     let decoded: unknown;
