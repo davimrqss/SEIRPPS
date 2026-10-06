@@ -7,6 +7,19 @@ export type NaturezaPagamento = "servidor" | "patronal";
 const number = (value: unknown) => Number(value ?? 0) || 0;
 const round = (value: number) => Math.round(value * 100) / 100;
 
+/** Snapshot the box configuration so later changes never recalculate saved guides. */
+export function camposAcrescimosGuia(jurosMulta: number, aplicaCorrecao: boolean, caixa?: { aliquota_correcao: number; indice_correcao: string } | null) {
+  const correcao = aplicaCorrecao ? number(caixa?.aliquota_correcao) : 0;
+  return {
+    aliquota_juros_servidor: jurosMulta,
+    aliquota_juros_patronal: jurosMulta,
+    aliquota_correcao_servidor: correcao,
+    aliquota_correcao_patronal: correcao,
+    aplica_correcao: aplicaCorrecao,
+    indice_correcao: aplicaCorrecao ? caixa?.indice_correcao ?? null : null,
+  };
+}
+
 export function calcularValoresGuia(guia: Guia) {
   const servidorBase = number(guia.valor_servidor);
   const patronalBase = number(guia.valor_patronal) + number(guia.valor_suplementar)
