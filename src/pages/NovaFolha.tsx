@@ -151,26 +151,211 @@ export default function NovaFolha() {
   const percent = (id: string, label: string, field: string) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} type="number" min="0" step="0.01" value={form[field as keyof typeof form]} onChange={(e) => set(field, e.target.value)} /></div>;
   const money = (id: string, label: string, field: string, required = false) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label><CurrencyInput id={id} value={form[field as keyof typeof form]} onValueChange={(value) => set(field, value)} required={required} /></div>;
 
-  return <div className="space-y-6 max-w-5xl">
-    <div><Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/guias")}><ArrowLeft className="h-4 w-4 mr-1" />Guias de Recolhimento</Button><h1 className="text-2xl font-bold text-foreground">Cadastrar Guia</h1><p className="text-muted-foreground mt-1">Informe os dados previdenciários e, se desejar, os pagamentos já realizados.</p></div>
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Card><CardHeader><CardTitle className="text-base">Identificação da guia</CardTitle></CardHeader><CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label htmlFor="descricao">Descrição *</Label><Input id="descricao" list="descricoes-cadastradas" maxLength={200} value={form.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Digite ou selecione uma descrição" /><datalist id="descricoes-cadastradas">{descricoes.map((item) => <option key={item.id} value={item.nome} />)}</datalist><div className="flex items-center gap-2"><Checkbox id="salvar-descricao" checked={salvarDescricao} onCheckedChange={(value) => setSalvarDescricao(value === true)} /><Label htmlFor="salvar-descricao" className="font-normal">Cadastrar esta descrição para reutilizar</Label></div></div><div className="space-y-2"><Label>Órgão pagador *</Label><Select value={form.orgaoId} onValueChange={(value) => set("orgaoId", value)}><SelectTrigger><SelectValue placeholder="Selecione o órgão" /></SelectTrigger><SelectContent>{orgaos.map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent></Select></div></div>
-        <div className="grid gap-4 md:grid-cols-3"><div className="space-y-2"><Label>Data de emissão *</Label><DateField value={form.dataEmissao} onChange={(value) => set("dataEmissao", value)} /></div><div className="space-y-2"><Label>Vencimento *</Label><DateField value={form.vencimento} onChange={(value) => set("vencimento", value)} /></div><div className="space-y-2"><Label>Grupo</Label><Select value={form.grupoFolha} onValueChange={(value) => set("grupoFolha", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1 - Normal">Normal</SelectItem><SelectItem value="2 - 13° Salário">13° Salário</SelectItem></SelectContent></Select></div></div>
-      </CardContent></Card>
-      <Card><CardHeader><CardTitle className="text-base">Contribuições</CardTitle></CardHeader><CardContent className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-2">{money("remuneracao", "Remuneração (R$)", "remuneracao", true)}{money("base", "Base de cálculo (R$)", "baseCalculo", true)}</div>
-        <div className="grid gap-4 md:grid-cols-3">{percent("as", "Alíquota servidor (%)", "aliquotaServidor")}{percent("ap", "Alíquota patronal (%)", "aliquotaPatronal")}<div className="space-y-2"><Label>Alíquota suplementar</Label><Select value={form.usaSuplementar} onValueChange={(value) => set("usaSuplementar", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nao">Não aplicar</SelectItem><SelectItem value="sim">Aplicar {form.aliquotaSuplementar}%</SelectItem></SelectContent></Select></div></div>
-        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Contribuição servidor (R$)</Label><CurrencyInput value={valorServidorManual ?? currencyToInput(servidor)} onValueChange={setValorServidorManual} /><p className="text-xs text-muted-foreground">{valorServidorManual === null ? "Calculada automaticamente" : "Valor informado manualmente"}</p></div><div className="space-y-2"><Label>Contribuição patronal (R$)</Label><CurrencyInput value={valorPatronalManual ?? currencyToInput(patronal)} onValueChange={setValorPatronalManual} /><p className="text-xs text-muted-foreground">{valorPatronalManual === null ? "Calculada automaticamente" : "Valor informado manualmente"}</p></div></div>
-        <div className="grid gap-4 md:grid-cols-3">{money("mat", "Salário maternidade", "salarioMaternidade")}{money("fam", "Salário família", "salarioFamilia")}{money("aux", "Auxílio doença", "auxDoenca")}</div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {percent("juros-multa", "Juros e Multa (%)", "jurosMulta")}
-          <CorrecaoMonetaria id="correcao" checked={aplicaCorrecao} onChange={setAplicaCorrecao} indice={caixa?.indice_correcao} aliquota={caixa?.aliquota_correcao} disabled={!caixa} />
+return (
+    <div className="space-y-6 max-w-5xl">
+      <div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2 mb-2"
+          onClick={() => navigate("/guias")}
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Guias de Recolhimento
+        </Button>
+        <h1 className="text-2xl font-bold text-foreground">Cadastrar Guia</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* CARD 1: IDENTIFICAÇÃO */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Identificação da guia</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="descricao">Descrição *</Label>
+                <Input
+                  id="descricao"
+                  list="descricoes-cadastradas"
+                  maxLength={200}
+                  value={form.descricao}
+                  onChange={(e) => set("descricao", e.target.value)}
+                  placeholder="Digite ou selecione uma descrição"
+                />
+                <datalist id="descricoes-cadastradas">
+                  {descricoes.map((item) => (
+                    <option key={item.id} value={item.nome} />
+                  ))}
+                </datalist>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="salvar-descricao"
+                    checked={salvarDescricao}
+                    onCheckedChange={(value) => setSalvarDescricao(value === true)}
+                  />
+                  <Label htmlFor="salvar-descricao" className="font-normal">
+                    Cadastrar esta descrição para reutilizar
+                  </Label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Órgão pagador *</Label>
+                <Select value={form.orgaoId} onValueChange={(value) => set("orgaoId", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o órgão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgaos.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Data de emissão *</Label>
+                <DateField value={form.dataEmissao} onChange={(value) => set("dataEmissao", value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Vencimento *</Label>
+                <DateField value={form.vencimento} onChange={(value) => set("vencimento", value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Grupo</Label>
+                <Select value={form.grupoFolha} onValueChange={(value) => set("grupoFolha", value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 - Normal">Normal</SelectItem>
+                    <SelectItem value="2 - 13° Salário">13° Salário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CARD 2: CONTRIBUIÇÕES */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Contribuições</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              {money("remuneracao", "Remuneração (R$)", "remuneracao", true)}
+              {money("base", "Base de cálculo (R$)", "baseCalculo", true)}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {percent("as", "Alíquota servidor (%)", "aliquotaServidor")}
+              {percent("ap", "Alíquota patronal (%)", "aliquotaPatronal")}
+              <div className="space-y-2">
+                <Label>Alíquota suplementar</Label>
+                <Select value={form.usaSuplementar} onValueChange={(value) => set("usaSuplementar", value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nao">Não aplicar</SelectItem>
+                    <SelectItem value="sim">Aplicar {form.aliquotaSuplementar}%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* CONTRIBUIÇÕES COM OS TEXTOS INFORMATIVOS JÁ REMOVIDOS */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Contribuição servidor (R$)</Label>
+                <CurrencyInput
+                  value={valorServidorManual ?? currencyToInput(servidor)}
+                  onValueChange={setValorServidorManual}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Contribuição patronal (R$)</Label>
+                <CurrencyInput
+                  value={valorPatronalManual ?? currencyToInput(patronal)}
+                  onValueChange={setValorPatronalManual}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {money("mat", "Salário maternidade", "salarioMaternidade")}
+              {money("fam", "Salário família", "salarioFamilia")}
+              {money("aux", "Auxílio doença", "auxDoenca")}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {percent("juros-multa", "Juros e Multa (%)", "jurosMulta")}
+              <CorrecaoMonetaria
+                id="correcao"
+                checked={aplicaCorrecao}
+                onChange={setAplicaCorrecao}
+                indice={caixa?.indice_correcao}
+                aliquota={caixa?.aliquota_correcao}
+                disabled={!caixa}
+              />
+            </div>
+
+            <div className="grid gap-4 rounded-md bg-muted p-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Devido servidor</p>
+                <p className="text-xl font-bold">{fmtBRL(preview.devidoServidor)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Devido patronal</p>
+                <p className="text-xl font-bold">{fmtBRL(preview.devidoPatronal)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CARD 3: PAGAMENTOS INICIAIS */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Pagamentos iniciais (opcional)</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              {money("ps", "Valor pago — servidor", "pagamentoServidor")}
+              <div className="space-y-2">
+                <Label>Data — servidor</Label>
+                <DateField
+                  value={form.dataPagamentoServidor}
+                  onChange={(value) => set("dataPagamentoServidor", value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {money("pp", "Valor pago — patronal", "pagamentoPatronal")}
+              <div className="space-y-2">
+                <Label>Data — patronal</Label>
+                <DateField
+                  value={form.dataPagamentoPatronal}
+                  onChange={(value) => set("dataPagamentoPatronal", value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" size="lg" disabled={loading}>
+            <Save className="h-4 w-4 mr-2" />
+            {loading ? "Cadastrando..." : "Cadastrar e visualizar PDF"}
+          </Button>
         </div>
-        <div className="grid gap-4 rounded-md bg-muted p-4 md:grid-cols-2"><div><p className="text-sm text-muted-foreground">Devido servidor</p><p className="text-xl font-bold">{fmtBRL(preview.devidoServidor)}</p></div><div><p className="text-sm text-muted-foreground">Devido patronal</p><p className="text-xl font-bold">{fmtBRL(preview.devidoPatronal)}</p></div></div>
-      </CardContent></Card>
-      <Card><CardHeader><CardTitle className="text-base">Pagamentos iniciais (opcional)</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div className="space-y-3">{money("ps", "Valor pago — servidor", "pagamentoServidor")}<div className="space-y-2"><Label>Data — servidor</Label><DateField value={form.dataPagamentoServidor} onChange={(value) => set("dataPagamentoServidor", value)} /></div></div><div className="space-y-3">{money("pp", "Valor pago — patronal", "pagamentoPatronal")}<div className="space-y-2"><Label>Data — patronal</Label><DateField value={form.dataPagamentoPatronal} onChange={(value) => set("dataPagamentoPatronal", value)} /></div></div></CardContent></Card>
-      <div className="flex justify-end"><Button type="submit" size="lg" disabled={loading}><Save className="h-4 w-4 mr-2" />{loading ? "Cadastrando..." : "Cadastrar e visualizar PDF"}</Button></div>
-    </form>
-  </div>;
-}
+      </form>
+    </div>
+  );
