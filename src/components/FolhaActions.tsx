@@ -22,7 +22,8 @@ import { DateField } from "@/components/DateField";
 import { currencyToInput, parseCurrency } from "@/lib/format";
 import { useOrgaos } from "@/hooks/useCadastros";
 import { useCaixaAtiva } from "@/hooks/useCaixa";
-import { calcularValoresGuia } from "@/lib/guiaCalculations";
+import { calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculations";
+import { CorrecaoMonetaria } from "@/components/CorrecaoMonetaria";
 import type { Tables } from "@/integrations/supabase/types";
 import { safeErrorMessage } from "@/lib/safeError";
 
@@ -56,10 +57,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     valor_suplementar: currencyToInput(folha.valor_suplementar),
     aliquota_servidor: String(folha.aliquota_servidor),
     aliquota_patronal: String(folha.aliquota_patronal),
-    aliquota_juros_servidor: String(folha.aliquota_juros_servidor ?? 0),
-    aliquota_juros_patronal: String(folha.aliquota_juros_patronal ?? 0),
-    aliquota_correcao_servidor: String(folha.aliquota_correcao_servidor ?? 0),
-    aliquota_correcao_patronal: String(folha.aliquota_correcao_patronal ?? 0),
+    jurosMulta: String(folha.aliquota_juros_servidor ?? 0),
     salario_maternidade: currencyToInput(folha.salario_maternidade),
     salario_familia: currencyToInput(folha.salario_familia),
     aux_doenca: currencyToInput(folha.aux_doenca),
@@ -72,9 +70,29 @@ export function FolhaActions({ folha }: { folha: Folha }) {
   const [patronalManual, setPatronalManual] = useState(false);
   const { data: orgaos = [] } = useOrgaos();
   const { data: caixa } = useCaixaAtiva();
+  const correcaoInicial = folha.aplica_correcao ?? (Number(folha.aliquota_correcao_servidor) > 0 || Number(folha.aliquota_correcao_patronal) > 0);
+  const [aplicaCorrecao, setAplicaCorrecao] = useState(correcaoInicial);
+  const [jurosAlterados, setJurosAlterados] = useState(false);
+  const [correcaoAlterada, setCorrecaoAlterada] = useState(false);
+  const acrescimos = {
+    ...camposAcrescimosGuia(Number(form.jurosMulta) || 0, aplicaCorrecao, caixa),
+    ...(!jurosAlterados ? {
+      aliquota_juros_servidor: folha.aliquota_juros_servidor,
+      aliquota_juros_patronal: folha.aliquota_juros_patronal,
+    } : {}),
+    ...(!correcaoAlterada ? {
+      aliquota_correcao_servidor: folha.aliquota_correcao_servidor,
+      aliquota_correcao_patronal: folha.aliquota_correcao_patronal,
+      aplica_correcao: folha.aplica_correcao,
+      indice_correcao: folha.indice_correcao,
+    } : {}),
+  };
 
   const openEdit = () => {
     setForm(initial());
+    setAplicaCorrecao(correcaoInicial);
+    setJurosAlterados(false);
+    setCorrecaoAlterada(false);
     const initialBase = Number(folha.base_calculo);
     const calculatedServidor = initialBase * (Number(folha.aliquota_servidor) / 100);
     const calculatedPatronal = initialBase * (Number(folha.aliquota_patronal) / 100);
@@ -131,10 +149,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
         valor_suplementar: parseCurrency(form.valor_suplementar),
         aliquota_servidor: aliqServ,
         aliquota_patronal: aliqPat,
-        aliquota_juros_servidor: parseFloat(form.aliquota_juros_servidor) || 0,
-        aliquota_juros_patronal: parseFloat(form.aliquota_juros_patronal) || 0,
-        aliquota_correcao_servidor: parseFloat(form.aliquota_correcao_servidor) || 0,
-        aliquota_correcao_patronal: parseFloat(form.aliquota_correcao_patronal) || 0,
+        ...acrescimos,
         salario_maternidade: parseCurrency(form.salario_maternidade),
         salario_familia: parseCurrency(form.salario_familia),
         aux_doenca: parseCurrency(form.aux_doenca),
@@ -185,10 +200,7 @@ export function FolhaActions({ folha }: { folha: Folha }) {
     salario_maternidade: parseCurrency(form.salario_maternidade),
     salario_familia: parseCurrency(form.salario_familia),
     aux_doenca: parseCurrency(form.aux_doenca),
-    aliquota_juros_servidor: parseFloat(form.aliquota_juros_servidor) || 0,
-    aliquota_juros_patronal: parseFloat(form.aliquota_juros_patronal) || 0,
-    aliquota_correcao_servidor: parseFloat(form.aliquota_correcao_servidor) || 0,
-    aliquota_correcao_patronal: parseFloat(form.aliquota_correcao_patronal) || 0,
+    ...acrescimos,
   });
 
   return (
@@ -229,6 +241,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <Info label="Base de Cálculo" value={fmt(Number(folha.base_calculo))} />
             <Info label={`Servidor (${folha.aliquota_servidor}%)`} value={fmt(Number(folha.valor_servidor))} />
             <Info label={`Patronal (${folha.aliquota_patronal}%)`} value={fmt(Number(folha.valor_patronal))} />
+            <Info label="Juros e Multa (%)" value={folha.aliquota_juros_servidor === folha.aliquota_juros_patronal ? `${folha.aliquota_juros_servidor}%` : `Servidor: ${folha.aliquota_juros_servidor}% / Patronal: ${folha.aliquota_juros_patronal}%`} />
+            <Info label="Correção Monetária" value={correcaoInicial ? `${folha.indice_correcao ?? caixa?.indice_correcao ?? ""} — ${folha.aliquota_correcao_servidor}%` : "Não"} />
             <div>
               <p className="text-muted-foreground">Status</p>
               <Badge
@@ -330,11 +344,9 @@ export function FolhaActions({ folha }: { folha: Folha }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><Label htmlFor="e-supl">Contribuição Suplementar (R$)</Label><CurrencyInput id="e-supl" value={form.valor_suplementar} onValueChange={(v) => change("valor_suplementar", v)} /></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2"><Label htmlFor="e-js">Juros/Multa servidor (%)</Label><Input id="e-js" type="number" min="0" step="0.01" value={form.aliquota_juros_servidor} onChange={(e) => change("aliquota_juros_servidor", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="e-jp">Juros/Multa patronal (%)</Label><Input id="e-jp" type="number" min="0" step="0.01" value={form.aliquota_juros_patronal} onChange={(e) => change("aliquota_juros_patronal", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="e-cs">{caixa?.indice_correcao ?? "Correção"} servidor (%)</Label><Input id="e-cs" type="number" min="0" step="0.01" value={form.aliquota_correcao_servidor} onChange={(e) => change("aliquota_correcao_servidor", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="e-cp">{caixa?.indice_correcao ?? "Correção"} patronal (%)</Label><Input id="e-cp" type="number" min="0" step="0.01" value={form.aliquota_correcao_patronal} onChange={(e) => change("aliquota_correcao_patronal", e.target.value)} /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="e-juros">Juros e Multa (%)</Label><Input id="e-juros" type="number" min="0" step="0.01" value={form.jurosMulta} onChange={(e) => { setJurosAlterados(true); change("jurosMulta", e.target.value); }} /></div>
+              <CorrecaoMonetaria id="e-correcao" checked={aplicaCorrecao} disabled={!caixa} onChange={(value) => { setCorrecaoAlterada(true); setAplicaCorrecao(value); }} indice={correcaoAlterada ? caixa?.indice_correcao : folha.indice_correcao ?? caixa?.indice_correcao} aliquota={correcaoAlterada ? caixa?.aliquota_correcao : folha.aliquota_correcao_servidor} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
