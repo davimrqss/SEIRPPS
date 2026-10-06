@@ -29,3 +29,6 @@
 - [ ] Concluir a transformação de Centros de Custo em Descrições independentes de órgãos.
 - [ ] Corrigir falhas atuais de interface e atualizar o Preview.
 - [ ] Auditar e corrigir RLS, autenticação, segredos, validação, dependências e mensagens de erro.
+- [ ] Unificar a alíquota de juros/multa para servidor e patronal nas guias.
+- [ ] Configurar índice e alíquota da correção monetária por caixa.
+- [ ] Permitir aplicar ou não a correção monetária na guia, exibindo a configuração da caixa sem edição.
