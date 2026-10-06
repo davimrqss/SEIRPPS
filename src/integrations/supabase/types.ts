@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       caixas_previdencia: {
         Row: {
+          aliquota_correcao: number
           aliquota_patronal: number
           aliquota_servidor: number
           aliquota_suplementar: number
@@ -37,6 +38,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliquota_correcao?: number
           aliquota_patronal?: number
           aliquota_servidor?: number
           aliquota_suplementar?: number
@@ -58,6 +60,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliquota_correcao?: number
           aliquota_patronal?: number
           aliquota_servidor?: number
           aliquota_suplementar?: number
@@ -168,6 +171,7 @@ export type Database = {
           aliquota_juros_servidor: number
           aliquota_patronal: number
           aliquota_servidor: number
+          aplica_correcao: boolean | null
           aux_doenca: number
           base_calculo: number
           caixa_id: string
@@ -177,6 +181,7 @@ export type Database = {
           data_emissao: string | null
           grupo_folha: string
           id: string
+          indice_correcao: string | null
           is_13: boolean
           juros_multa: number
           mes_referencia: string
@@ -201,6 +206,7 @@ export type Database = {
           aliquota_juros_servidor?: number
           aliquota_patronal?: number
           aliquota_servidor?: number
+          aplica_correcao?: boolean | null
           aux_doenca?: number
           base_calculo?: number
           caixa_id: string
@@ -210,6 +216,7 @@ export type Database = {
           data_emissao?: string | null
           grupo_folha?: string
           id?: string
+          indice_correcao?: string | null
           is_13?: boolean
           juros_multa?: number
           mes_referencia: string
@@ -234,6 +241,7 @@ export type Database = {
           aliquota_juros_servidor?: number
           aliquota_patronal?: number
           aliquota_servidor?: number
+          aplica_correcao?: boolean | null
           aux_doenca?: number
           base_calculo?: number
           caixa_id?: string
@@ -243,6 +251,7 @@ export type Database = {
           data_emissao?: string | null
           grupo_folha?: string
           id?: string
+          indice_correcao?: string | null
           is_13?: boolean
           juros_multa?: number
           mes_referencia?: string

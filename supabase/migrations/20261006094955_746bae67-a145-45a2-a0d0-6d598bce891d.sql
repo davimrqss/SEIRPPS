@@ -1,0 +1,4 @@
+ALTER TABLE public.caixas_previdencia ADD COLUMN aliquota_correcao numeric NOT NULL DEFAULT 0;
+ALTER TABLE public.folhas_pagamento ADD COLUMN aplica_correcao boolean, ADD COLUMN indice_correcao text;
+CREATE OR REPLACE FUNCTION public.validar_aliquota_correcao_caixa() RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$ BEGIN IF NEW.aliquota_correcao < 0 OR NEW.aliquota_correcao = 'NaN'::numeric OR NEW.aliquota_correcao = 'Infinity'::numeric THEN RAISE EXCEPTION 'Alíquota de correção monetária inválida'; END IF; RETURN NEW; END; $$;
+CREATE TRIGGER validar_correcao_caixa BEFORE INSERT OR UPDATE ON public.caixas_previdencia FOR EACH ROW EXECUTE FUNCTION public.validar_aliquota_correcao_caixa();
