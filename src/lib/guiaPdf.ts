@@ -22,6 +22,8 @@ export interface GuiaFolha {
   aliquota_juros_patronal?: number | string | null;
   aliquota_correcao_servidor?: number | string | null;
   aliquota_correcao_patronal?: number | string | null;
+  indice_correcao?: string | null;
+  aplica_correcao?: boolean | null;
   grupo_folha?: string | null;
   aliquota_servidor: number | string;
   aliquota_patronal: number | string;
@@ -134,6 +136,8 @@ export function buildGuiaPDF(
   const deducoes = n(folha.salario_maternidade) + n(folha.salario_familia) + n(folha.aux_doenca);
   const somaPatronal = patronal + suplementar;
   const calc = calcularValoresGuia(folha as Parameters<typeof calcularValoresGuia>[0]);
+  const indiceCorrecao = folha.indice_correcao || (folha.aplica_correcao == null ? caixa.indice_correcao : null);
+  const correcaoLabel = `CORREÇÃO MONETÁRIA${indiceCorrecao ? ` (${indiceCorrecao})` : ""}`;
   const decimo = folha.is_13 ? "Sim" : "Não";
   const comp = competencia(folha.mes_referencia);
   const emissao = folha.data_emissao ? isoToBR(folha.data_emissao).replace(/-/g, "/") : "-";
@@ -217,7 +221,7 @@ export function buildGuiaPDF(
     { label: "SERVIDOR", value: brl(servidor) },
     { label: "TOTAL DA CONTRIBUIÇÃO", value: brl(servidor) },
     { label: "JUROS / MULTA", value: brl(calc.jurosServidor) },
-    { label: `CORREÇÃO (${caixa.indice_correcao || "INPC"})`, value: brl(calc.correcaoServidor) },
+    { label: correcaoLabel, value: brl(calc.correcaoServidor) },
     { label: "VALOR A SER PAGO", value: brl(calc.devidoServidor) },
   ];
 
@@ -244,7 +248,7 @@ export function buildGuiaPDF(
     { label: "DEDUÇÕES", value: brl(deducoes) },
     { label: "TOTAL DA CONTRIBUIÇÃO", value: brl(somaPatronal - deducoes) },
     { label: "JUROS / MULTA", value: brl(calc.jurosPatronal) },
-    { label: `CORREÇÃO (${caixa.indice_correcao || "INPC"})`, value: brl(calc.correcaoPatronal) },
+    { label: correcaoLabel, value: brl(calc.correcaoPatronal) },
     { label: "VALOR A SER PAGO", value: brl(calc.devidoPatronal) },
   ];
 

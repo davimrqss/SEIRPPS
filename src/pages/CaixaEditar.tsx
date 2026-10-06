@@ -38,7 +38,7 @@ export default function CaixaEditar() {
   const [form, setForm] = useState({
     nome: "", razao_social: "", empresa: "", cnpj: "", email: "", telefone: "", endereco: "",
     cep: "", municipio: "", uf: "", estado: "",
-    aliquota_servidor: "11", aliquota_patronal: "13.51", aliquota_suplementar: "0", indice_correcao: "INPC",
+    aliquota_servidor: "11", aliquota_patronal: "13.51", aliquota_suplementar: "0", indice_correcao: "INPC", aliquota_correcao: "0",
   });
 
   useEffect(() => {
@@ -59,6 +59,7 @@ export default function CaixaEditar() {
       aliquota_patronal: String(caixa.aliquota_patronal ?? 13.51),
       aliquota_suplementar: String(caixa.aliquota_suplementar ?? 0),
       indice_correcao: caixa.indice_correcao ?? "INPC",
+      aliquota_correcao: String(caixa.aliquota_correcao ?? 0),
     });
   }, [caixa]);
 
@@ -66,6 +67,10 @@ export default function CaixaEditar() {
 
   const salvar = useMutation({
     mutationFn: async () => {
+      const correcao = Number(form.aliquota_correcao);
+      if (!Number.isFinite(correcao) || correcao < 0 || !form.indice_correcao.trim()) {
+        throw new Error("Informe um índice e uma alíquota de correção monetária válida.");
+      }
       const { error } = await supabase
         .from("caixas_previdencia")
         .update({
@@ -84,6 +89,7 @@ export default function CaixaEditar() {
           aliquota_patronal: parseFloat(form.aliquota_patronal) || 0,
           aliquota_suplementar: parseFloat(form.aliquota_suplementar) || 0,
           indice_correcao: form.indice_correcao.trim() || "INPC",
+          aliquota_correcao: correcao,
         })
         .eq("id", validCaixaId);
       if (error) throw error;
@@ -182,10 +188,17 @@ export default function CaixaEditar() {
           {field("aliquota_servidor", "Servidor (%)", { type: "number", step: "0.01" })}
           {field("aliquota_patronal", "Patronal (%)", { type: "number", step: "0.01" })}
           {field("aliquota_suplementar", "Suplementar (%)", { type: "number", step: "0.01" })}
-          {field("indice_correcao", "Índice de correção", { placeholder: "INPC, IPCA..." })}
           <p className="md:col-span-2 lg:col-span-4 text-xs text-muted-foreground">
             A alíquota suplementar definida aqui é usada quando a folha for marcada com "Sim".
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Percent className="h-5 w-5 text-primary" />Correção Monetária</CardTitle></CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          {field("aliquota_correcao", "Correção Monetária (%)", { type: "number", min: "0", step: "0.01" })}
+          {field("indice_correcao", "Índice", { placeholder: "INPC, IPCA...", maxLength: 50 })}
         </CardContent>
       </Card>
 

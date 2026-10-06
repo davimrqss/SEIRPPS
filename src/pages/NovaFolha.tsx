@@ -16,7 +16,8 @@ import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
 import { useOrgaos } from "@/hooks/useCadastros";
 import { supabase } from "@/integrations/supabase/client";
 import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
-import { calcularValoresGuia } from "@/lib/guiaCalculations";
+import { calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculations";
+import { CorrecaoMonetaria } from "@/components/CorrecaoMonetaria";
 import { buildGuiaPDF, urlToDataUrl } from "@/lib/guiaPdf";
 import type { Tables } from "@/integrations/supabase/types";
 import { z } from "zod";
@@ -43,13 +44,14 @@ export default function NovaFolha() {
   const { data: orgaos = [] } = useOrgaos();
   const [loading, setLoading] = useState(false);
   const [salvarDescricao, setSalvarDescricao] = useState(false);
+  const [aplicaCorrecao, setAplicaCorrecao] = useState(false);
   const [valorServidorManual, setValorServidorManual] = useState<string | null>(null);
   const [valorPatronalManual, setValorPatronalManual] = useState<string | null>(null);
   const [form, setForm] = useState({
     descricao: "", orgaoId: "", dataEmissao: "", vencimento: "", grupoFolha: "1 - Normal",
     remuneracao: "", baseCalculo: "", aliquotaServidor: "11", aliquotaPatronal: "22",
     aliquotaSuplementar: "0", usaSuplementar: "nao", salarioMaternidade: "", salarioFamilia: "",
-    auxDoenca: "", jurosServidor: "", jurosPatronal: "", correcaoServidor: "", correcaoPatronal: "",
+    auxDoenca: "", jurosMulta: "",
     pagamentoServidor: "", dataPagamentoServidor: "", pagamentoPatronal: "", dataPagamentoPatronal: "",
   });
 
@@ -77,14 +79,13 @@ export default function NovaFolha() {
   const servidor = valorServidorManual === null ? base * aliqServidor / 100 : parseCurrency(valorServidorManual);
   const patronal = valorPatronalManual === null ? base * aliqPatronal / 100 : parseCurrency(valorPatronalManual);
   const suplementar = base * aliqSuplementar / 100;
+  const acrescimos = camposAcrescimosGuia(Number(form.jurosMulta) || 0, aplicaCorrecao, caixa);
 
   const preview = useMemo(() => calcularValoresGuia({
     valor_servidor: servidor, valor_patronal: patronal, valor_suplementar: suplementar,
     salario_maternidade: parseCurrency(form.salarioMaternidade), salario_familia: parseCurrency(form.salarioFamilia),
-    aux_doenca: parseCurrency(form.auxDoenca), aliquota_juros_servidor: Number(form.jurosServidor) || 0,
-    aliquota_juros_patronal: Number(form.jurosPatronal) || 0, aliquota_correcao_servidor: Number(form.correcaoServidor) || 0,
-    aliquota_correcao_patronal: Number(form.correcaoPatronal) || 0,
-  } as Guia), [servidor, patronal, suplementar, form]);
+    aux_doenca: parseCurrency(form.auxDoenca), ...acrescimos,
+  } as Guia), [servidor, patronal, suplementar, form, aplicaCorrecao, caixa]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -115,8 +116,7 @@ export default function NovaFolha() {
       salario_maternidade: parseCurrency(form.salarioMaternidade), salario_familia: parseCurrency(form.salarioFamilia),
       aux_doenca: parseCurrency(form.auxDoenca), juros_multa: preview.jurosServidor + preview.jurosPatronal,
       aliquota_servidor: aliqServidor, aliquota_patronal: aliqPatronal,
-      aliquota_juros_servidor: Number(form.jurosServidor) || 0, aliquota_juros_patronal: Number(form.jurosPatronal) || 0,
-      aliquota_correcao_servidor: Number(form.correcaoServidor) || 0, aliquota_correcao_patronal: Number(form.correcaoPatronal) || 0,
+      ...acrescimos,
       is_13: form.grupoFolha.includes("13"), tipo: "folha", paga: false,
     };
     const { data: guia, error } = await supabase.from("folhas_pagamento").insert(payload).select().single();
@@ -163,7 +163,10 @@ export default function NovaFolha() {
         <div className="grid gap-4 md:grid-cols-3">{percent("as", "Alíquota servidor (%)", "aliquotaServidor")}{percent("ap", "Alíquota patronal (%)", "aliquotaPatronal")}<div className="space-y-2"><Label>Alíquota suplementar</Label><Select value={form.usaSuplementar} onValueChange={(value) => set("usaSuplementar", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nao">Não aplicar</SelectItem><SelectItem value="sim">Aplicar {form.aliquotaSuplementar}%</SelectItem></SelectContent></Select></div></div>
         <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Contribuição servidor (R$)</Label><CurrencyInput value={valorServidorManual ?? currencyToInput(servidor)} onValueChange={setValorServidorManual} /><p className="text-xs text-muted-foreground">{valorServidorManual === null ? "Calculada automaticamente" : "Valor informado manualmente"}</p></div><div className="space-y-2"><Label>Contribuição patronal (R$)</Label><CurrencyInput value={valorPatronalManual ?? currencyToInput(patronal)} onValueChange={setValorPatronalManual} /><p className="text-xs text-muted-foreground">{valorPatronalManual === null ? "Calculada automaticamente" : "Valor informado manualmente"}</p></div></div>
         <div className="grid gap-4 md:grid-cols-3">{money("mat", "Salário maternidade", "salarioMaternidade")}{money("fam", "Salário família", "salarioFamilia")}{money("aux", "Auxílio doença", "auxDoenca")}</div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">{percent("js", "Juros/Multa servidor (%)", "jurosServidor")}{percent("jp", "Juros/Multa patronal (%)", "jurosPatronal")}{percent("cs", `${caixa?.indice_correcao ?? "Correção"} servidor (%)`, "correcaoServidor")}{percent("cp", `${caixa?.indice_correcao ?? "Correção"} patronal (%)`, "correcaoPatronal")}</div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {percent("juros-multa", "Juros e Multa (%)", "jurosMulta")}
+          <CorrecaoMonetaria id="correcao" checked={aplicaCorrecao} onChange={setAplicaCorrecao} indice={caixa?.indice_correcao} aliquota={caixa?.aliquota_correcao} disabled={!caixa} />
+        </div>
         <div className="grid gap-4 rounded-md bg-muted p-4 md:grid-cols-2"><div><p className="text-sm text-muted-foreground">Devido servidor</p><p className="text-xl font-bold">{fmtBRL(preview.devidoServidor)}</p></div><div><p className="text-sm text-muted-foreground">Devido patronal</p><p className="text-xl font-bold">{fmtBRL(preview.devidoPatronal)}</p></div></div>
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-base">Pagamentos iniciais (opcional)</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div className="space-y-3">{money("ps", "Valor pago — servidor", "pagamentoServidor")}<div className="space-y-2"><Label>Data — servidor</Label><DateField value={form.dataPagamentoServidor} onChange={(value) => set("dataPagamentoServidor", value)} /></div></div><div className="space-y-3">{money("pp", "Valor pago — patronal", "pagamentoPatronal")}<div className="space-y-2"><Label>Data — patronal</Label><DateField value={form.dataPagamentoPatronal} onChange={(value) => set("dataPagamentoPatronal", value)} /></div></div></CardContent></Card>
