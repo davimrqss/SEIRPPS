@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { isoToBR } from "./format";
 import { calcularValoresGuia } from "./guiaCalculations";
+import ippnLogo from "@/assets/ippn-logo-fundo-branco.png";
 
 export interface GuiaFolha {
   centro_custo: string;
@@ -274,12 +275,14 @@ export const guiaFileName = (folha: GuiaFolha) =>
   `guia-${(folha.centro_custo || "guia").replace(/\s+/g, "-").toLowerCase()}-${folha.mes_referencia}.pdf`;
 
 export async function downloadGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null) {
-  const logo = await urlToDataUrl(logoUrl);
+  const isIPPN = /\bippn\b|ponto novo/i.test(`${caixa?.nome ?? ""} ${caixa?.razao_social ?? ""}`);
+  const logo = await urlToDataUrl(isIPPN ? ippnLogo : logoUrl);
   buildGuiaPDF(folha, caixa, logo).save(guiaFileName(folha));
 }
 
 export async function previewGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null) {
-  const logo = await urlToDataUrl(logoUrl);
+  const isIPPN = /\bippn\b|ponto novo/i.test(`${caixa?.nome ?? ""} ${caixa?.razao_social ?? ""}`);
+  const logo = await urlToDataUrl(isIPPN ? ippnLogo : logoUrl);
   const url = buildGuiaPDF(folha, caixa, logo).output("bloburl");
   window.open(url as unknown as string, "_blank");
 }
