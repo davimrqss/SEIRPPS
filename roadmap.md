@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Mover descrição para o campo maior do PDF, anteriormente Observações.
+- [x] Ampliar logo JACOPREV no PDF, preservando proporções.
+- [ ] Ajustar fundo branco da logo IPPN — aguarda envio da imagem original; armazenamento privado sem sessão acessível.
+
 - [x] Remover a escolha de tipo da criação e edição da folha, mantendo servidor e patronal juntos.
 - [x] Adicionar data de emissão selecionável para o dia 21, sem preenchimento automático.
 - [x] Manter data de vencimento selecionável para o dia 20, sem preenchimento automático.
