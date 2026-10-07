@@ -111,7 +111,7 @@ export function buildGuiaPDF(
     doc.text(t, x, y, { align: o?.align ?? "left" });
   };
 
-  // ---------- Logo da caixa: centralizada no topo ----------
+  // ---------- Logo da caixa: camto superior esquerdo ----------
   let y = 30;
   if (logoDataUrl) {
     try {
@@ -122,7 +122,7 @@ export function buildGuiaPDF(
       const scale = Math.min(maxW / props.width, maxH / props.height);
       const w = props.width * scale;
       const h = props.height * scale;
-      doc.addImage(logoDataUrl, MID - w / 2, y, w, h);
+      doc.addImage(logoDataUrl, M, y, w, h);
       y += h + 12;
     } catch {
       /* logo inválida: segue sem imagem */
