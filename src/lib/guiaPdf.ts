@@ -115,8 +115,12 @@ export function buildGuiaPDF(
   if (logoDataUrl) {
     try {
       const props = doc.getImageProperties(logoDataUrl);
-      const h = 52;
-      const w = Math.min((props.width / props.height) * h, 180);
+      const isJacoprev = /jacoprev/i.test(`${caixa.nome ?? ""} ${caixa.razao_social ?? ""}`);
+      const maxH = isJacoprev ? 76 : 52;
+      const maxW = isJacoprev ? 250 : 180;
+      const scale = Math.min(maxW / props.width, maxH / props.height);
+      const w = props.width * scale;
+      const h = props.height * scale;
       doc.addImage(logoDataUrl, MID - w / 2, y, w, h);
       y += h + 12;
     } catch {
@@ -196,10 +200,14 @@ export function buildGuiaPDF(
     paint(right, MID, R);
     top += h;
 
-    // Observações
-    doc.rect(M, top, R - M, 44);
-    text("OBSERVAÇÕES", MID, top + 12, { align: "center", size: 7 });
-    return top + 44;
+    // Descrição em largura total, no antigo espaço de observações.
+    doc.setFont("helvetica", "bold").setFontSize(8);
+    const descriptionLines = doc.splitTextToSize(folha.centro_custo || "-", R - M - 16) as string[];
+    const descriptionH = Math.max(44, 24 + descriptionLines.length * 9);
+    doc.rect(M, top, R - M, descriptionH);
+    text("DESCRIÇÃO", MID, top + 12, { align: "center", size: 7 });
+    text(folha.centro_custo || "-", M + 8, top + 25, { bold: true, size: 8, maxW: R - M - 16 });
+    return top + descriptionH;
   };
 
   // ---------- Guia Servidor ----------
@@ -207,7 +215,6 @@ export function buildGuiaPDF(
     { label: "RAZÃO SOCIAL", value: razao },
     { label: "CNPJ", value: caixa.cnpj || "-" },
     { label: "ÓRGÃO PAGADOR", value: folha.orgao || "-" },
-    { label: "DESCRIÇÃO", value: folha.centro_custo || "-" },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
     { label: "13°", value: decimo },
@@ -232,7 +239,6 @@ export function buildGuiaPDF(
     { label: "RAZÃO SOCIAL", value: razao },
     { label: "CNPJ", value: caixa.cnpj || "-" },
     { label: "ÓRGÃO PAGADOR", value: folha.orgao || "-" },
-    { label: "DESCRIÇÃO", value: folha.centro_custo || "-" },
     { label: "PLANO DE BENEFÍCIO", value: "Plano Previdenciário" },
     { label: "COMPETÊNCIA", value: comp },
     { label: "13°", value: decimo },
