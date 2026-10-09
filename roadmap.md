@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Centralizar e ampliar um pouco as logos da guia PDF.
+- [x] Calcular a alíquota pela contribuição digitada no cadastro, mantendo o cálculo inverso por alíquota.
+- [x] Testar o cálculo (10 testes aprovados) e conferir visualmente o PDF sem cortes ou sobreposições; teste autenticado do cadastro indisponível neste ambiente.
+
 - [x] Mover descrição para o campo maior do PDF, anteriormente Observações.
 - [x] Ampliar logo JACOPREV no PDF, preservando proporções.
 - [x] Ajustar fundo branco da logo IPPN e aplicar na visualização e no download das guias da IPPN/Ponto Novo.

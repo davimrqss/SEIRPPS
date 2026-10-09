@@ -111,18 +111,18 @@ export function buildGuiaPDF(
     doc.text(t, x, y, { align: o?.align ?? "left" });
   };
 
-  // ---------- Logo da caixa: camto superior esquerdo ----------
+  // ---------- Logo da caixa: centralizada e proporcional ----------
   let y = 30;
   if (logoDataUrl) {
     try {
       const props = doc.getImageProperties(logoDataUrl);
       const isJacoprev = /jacoprev/i.test(`${caixa.nome ?? ""} ${caixa.razao_social ?? ""}`);
-      const maxH = isJacoprev ? 76 : 52;
-      const maxW = isJacoprev ? 250 : 180;
+      const maxH = isJacoprev ? 88 : 60;
+      const maxW = isJacoprev ? 288 : 207;
       const scale = Math.min(maxW / props.width, maxH / props.height);
       const w = props.width * scale;
       const h = props.height * scale;
-      doc.addImage(logoDataUrl, M, y, w, h);
+      doc.addImage(logoDataUrl, MID - w / 2, y, w, h);
       y += h + 12;
     } catch {
       /* logo inválida: segue sem imagem */

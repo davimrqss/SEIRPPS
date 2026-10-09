@@ -7,6 +7,17 @@ export type NaturezaPagamento = "servidor" | "patronal";
 const number = (value: unknown) => Number(value ?? 0) || 0;
 const round = (value: number) => Math.round(value * 100) / 100;
 
+/** The last edited input drives the calculation; a missing base cannot define a rate. */
+export function calcularContribuicao(base: number, aliquota: number, valorManual: number | null) {
+  if (valorManual !== null) {
+    return {
+      contribuicao: valorManual,
+      aliquota: base > 0 ? valorManual * 100 / base : 0,
+    };
+  }
+  return { contribuicao: base * aliquota / 100, aliquota };
+}
+
 /** Snapshot the box configuration so later changes never recalculate saved guides. */
 export function camposAcrescimosGuia(jurosMulta: number, aplicaCorrecao: boolean, caixa?: { aliquota_correcao: number; indice_correcao: string } | null) {
   const correcao = aplicaCorrecao ? number(caixa?.aliquota_correcao) : 0;
