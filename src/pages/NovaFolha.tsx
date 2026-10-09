@@ -16,7 +16,7 @@ import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
 import { useOrgaos } from "@/hooks/useCadastros";
 import { supabase } from "@/integrations/supabase/client";
 import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
-import { calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculations";
+import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculations";
 import { CorrecaoMonetaria } from "@/components/CorrecaoMonetaria";
 import { buildGuiaPDF, urlToDataUrl } from "@/lib/guiaPdf";
 import type { Tables } from "@/integrations/supabase/types";
@@ -71,13 +71,21 @@ export default function NovaFolha() {
     setForm((prev) => ({ ...prev, aliquotaServidor: String(caixa.aliquota_servidor), aliquotaPatronal: String(caixa.aliquota_patronal), aliquotaSuplementar: String(caixa.aliquota_suplementar) }));
   }, [caixa]);
 
-  const set = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+  const set = (field: string, value: string) => {
+    if (field === "aliquotaServidor") setValorServidorManual(null);
+    if (field === "aliquotaPatronal") setValorPatronalManual(null);
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
   const base = parseCurrency(form.baseCalculo);
-  const aliqServidor = Number(form.aliquotaServidor) || 0;
-  const aliqPatronal = Number(form.aliquotaPatronal) || 0;
+  const { contribuicao: servidor, aliquota: aliqServidor } = calcularContribuicao(
+    base, Number(form.aliquotaServidor) || 0,
+    valorServidorManual === null ? null : parseCurrency(valorServidorManual),
+  );
+  const { contribuicao: patronal, aliquota: aliqPatronal } = calcularContribuicao(
+    base, Number(form.aliquotaPatronal) || 0,
+    valorPatronalManual === null ? null : parseCurrency(valorPatronalManual),
+  );
   const aliqSuplementar = form.usaSuplementar === "sim" ? Number(form.aliquotaSuplementar) || 0 : 0;
-  const servidor = valorServidorManual === null ? base * aliqServidor / 100 : parseCurrency(valorServidorManual);
-  const patronal = valorPatronalManual === null ? base * aliqPatronal / 100 : parseCurrency(valorPatronalManual);
   const suplementar = base * aliqSuplementar / 100;
   const acrescimos = camposAcrescimosGuia(Number(form.jurosMulta) || 0, aplicaCorrecao, caixa);
 
@@ -95,6 +103,10 @@ export default function NovaFolha() {
     }
     if (form.vencimento.slice(-2) !== "20") {
       toast({ title: "Confira o vencimento", description: "O vencimento deve ser no dia 20.", variant: "destructive" });
+      return;
+    }
+    if (base <= 0 && (servidor > 0 || patronal > 0)) {
+      toast({ title: "Confira a base de cálculo", description: "Informe uma base de cálculo maior que zero para calcular as alíquotas das contribuições.", variant: "destructive" });
       return;
     }
     const pagamentoServidor = parseCurrency(form.pagamentoServidor);
@@ -148,7 +160,23 @@ export default function NovaFolha() {
     navigate("/guias");
   };
 
-  const percent = (id: string, label: string, field: string) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} type="number" min="0" step="0.01" value={form[field as keyof typeof form]} onChange={(e) => set(field, e.target.value)} /></div>;
+  const percent = (id: string, label: string, field: string) => {
+    const manualRate = field === "aliquotaServidor" && valorServidorManual !== null ? aliqServidor
+      : field === "aliquotaPatronal" && valorPatronalManual !== null ? aliqPatronal : null;
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          type="number"
+          min="0"
+          step={manualRate === null ? "0.01" : "any"}
+          value={manualRate === null ? form[field as keyof typeof form] : Number(manualRate.toFixed(6))}
+          onChange={(e) => set(field, e.target.value)}
+        />
+      </div>
+    );
+  };
   const money = (id: string, label: string, field: string, required = false) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label><CurrencyInput id={id} value={form[field as keyof typeof form]} onValueChange={(value) => set(field, value)} required={required} /></div>;
 
 return (
@@ -274,15 +302,17 @@ return (
             {/* CONTRIBUIÇÕES COM OS TEXTOS INFORMATIVOS JÁ REMOVIDOS */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Contribuição servidor (R$)</Label>
+                <Label htmlFor="contribuicao-servidor">Contribuição servidor (R$)</Label>
                 <CurrencyInput
+                  id="contribuicao-servidor"
                   value={valorServidorManual ?? currencyToInput(servidor)}
                   onValueChange={setValorServidorManual}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Contribuição patronal (R$)</Label>
+                <Label htmlFor="contribuicao-patronal">Contribuição patronal (R$)</Label>
                 <CurrencyInput
+                  id="contribuicao-patronal"
                   value={valorPatronalManual ?? currencyToInput(patronal)}
                   onValueChange={setValorPatronalManual}
                 />
