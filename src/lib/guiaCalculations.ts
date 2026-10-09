@@ -12,7 +12,7 @@ export function calcularContribuicao(base: number, aliquota: number, valorManual
   if (valorManual !== null) {
     return {
       contribuicao: valorManual,
-      aliquota: base > 0 ? valorManual / base * 100 : 0,
+      aliquota: base > 0 ? valorManual * 100 / base : 0,
     };
   }
   return { contribuicao: base * aliquota / 100, aliquota };
