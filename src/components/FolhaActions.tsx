@@ -26,6 +26,7 @@ import { calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculation
 import { CorrecaoMonetaria } from "@/components/CorrecaoMonetaria";
 import type { Tables } from "@/integrations/supabase/types";
 import { safeErrorMessage } from "@/lib/safeError";
+import { guiaDatesSchema } from "@/lib/guiaDates";
 
 type Folha = Tables<"folhas_pagamento">;
 
@@ -118,12 +119,8 @@ export function FolhaActions({ folha }: { folha: Folha }) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.data_emissao || !form.vencimento) {
-      toast({ title: "Datas obrigatórias", description: "Informe as datas de emissão e vencimento.", variant: "destructive" });
-      return;
-    }
-    if (form.data_emissao.slice(-2) !== "21" || form.vencimento.slice(-2) !== "20") {
-      toast({ title: "Confira as datas", description: "A emissão deve ser no dia 21 e o vencimento no dia 20.", variant: "destructive" });
+    if (!guiaDatesSchema.safeParse({ dataEmissao: form.data_emissao, vencimento: form.vencimento }).success) {
+      toast({ title: "Confira as datas", description: "Informe datas válidas de emissão e vencimento.", variant: "destructive" });
       return;
     }
     setLoading(true);

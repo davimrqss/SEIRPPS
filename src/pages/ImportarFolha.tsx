@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { extractPayrollSummaries } from "@/lib/payrollPdf";
 import { fmtBRL, parseCurrency } from "@/lib/format";
 import { toast } from "sonner";
+import { guiaDatesSchema } from "@/lib/guiaDates";
 
 type AiRow = {
   codigo_centro_custo: string; centro_custo: string; competencia: string; grupo_folha: string;
@@ -109,8 +110,7 @@ export default function ImportarFolha() {
 
   const save = async () => {
     if (!activeCaixaId || selected.length === 0) return;
-    if (emissao.slice(-2) !== "21") return void toast.error("A data de emissão deve ser no dia 21.");
-    if (vencimento.slice(-2) !== "20") return void toast.error("A data de vencimento deve ser no dia 20.");
+    if (!guiaDatesSchema.safeParse({ dataEmissao: emissao, vencimento }).success) return void toast.error("Informe datas válidas de emissão e vencimento.");
     if (selected.some((row) => !row.centroId)) return void toast.error("Vincule todos os centros selecionados.");
     const options = centros as Centro[];
     setSaving(true);

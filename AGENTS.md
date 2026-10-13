@@ -6,3 +6,5 @@
 - Snapshot correction rates and indices on guides; shared adjustment inputs populate legacy per-part columns, preserving historical guides until their adjustments are explicitly changed.
 - Store reusable guide descriptions independently from paying agencies; the guide itself owns the selected agency.
 - Guard privileged pages in the router as well as in Supabase RLS so hidden menu items cannot be opened directly.
+- Validate guide dates through `guiaDatesSchema` in creation, editing and import so all entry points share the same validation.
+- Open guide PDFs through `previewGuia`, including after creation, so the viewer and named download use the same document.
