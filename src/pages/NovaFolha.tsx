@@ -18,18 +18,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
 import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculations";
 import { CorrecaoMonetaria } from "@/components/CorrecaoMonetaria";
-import { buildGuiaPDF, urlToDataUrl } from "@/lib/guiaPdf";
+import { previewGuia } from "@/lib/guiaPdf";
+import { guiaDatesSchema } from "@/lib/guiaDates";
 import type { Tables } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { safeErrorMessage } from "@/lib/safeError";
 
 type Guia = Tables<"folhas_pagamento">;
 
-const GuiaSchema = z.object({
+const GuiaSchema = guiaDatesSchema.extend({
   descricao: z.string().trim().min(1).max(200),
   orgaoId: z.string().uuid(),
-  dataEmissao: z.string().date(),
-  vencimento: z.string().date(),
 });
 
 export type CentroOpt = { id: string; nome: string; codigo: string | null; orgaos?: { nome: string } | null };
@@ -101,10 +100,6 @@ export default function NovaFolha() {
       toast({ title: "Preencha os campos obrigatórios", description: "Descrição, órgão e datas são obrigatórios.", variant: "destructive" });
       return;
     }
-    if (form.vencimento.slice(-2) !== "20") {
-      toast({ title: "Confira o vencimento", description: "O vencimento deve ser no dia 20.", variant: "destructive" });
-      return;
-    }
     if (base <= 0 && (servidor > 0 || patronal > 0)) {
       toast({ title: "Confira a base de cálculo", description: "Informe uma base de cálculo maior que zero para calcular as alíquotas das contribuições.", variant: "destructive" });
       return;
@@ -147,9 +142,7 @@ export default function NovaFolha() {
     if (pagamentos.length) await supabase.from("pagamentos").insert(pagamentos);
     const paga = pagamentoServidor + 0.009 >= preview.devidoServidor && pagamentoPatronal + 0.009 >= preview.devidoPatronal;
     if (paga) await supabase.from("folhas_pagamento").update({ paga: true }).eq("id", guia.id);
-    const logo = await urlToDataUrl(logoUrl);
-    const pdfUrl = buildGuiaPDF(guia, caixa ?? undefined, logo).output("bloburl") as unknown as string;
-    if (popup) popup.location.href = pdfUrl; else window.open(pdfUrl, "_blank");
+    await previewGuia(guia, caixa ?? undefined, logoUrl, popup);
     setLoading(false);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["folhas-guias"] }),

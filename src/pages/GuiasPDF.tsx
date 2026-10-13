@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Download, Eye, FileText, Grid2X2, List, Plus } from "lucide-react";
+import { CreditCard, FileText, Grid2X2, List, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
 import { useOrgaos } from "@/hooks/useCadastros";
-import { downloadGuia, previewGuia } from "@/lib/guiaPdf";
+import { previewGuia } from "@/lib/guiaPdf";
 import { fmtBRL } from "@/lib/format";
 import { resumirPagamentos } from "@/lib/guiaCalculations";
 import { FolhaActions } from "@/components/FolhaActions";
@@ -76,7 +76,7 @@ export default function GuiasPDF() {
     </CardContent></Card>
     {!linhas.length ? <Card><CardContent className="py-12 text-center text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-50" />Nenhuma guia encontrada</CardContent></Card> :
       <div className={modo === "grade" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>{linhas.map(({ guia, resumo }) => {
-        const actions = <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => previewGuia(guia, caixa ?? undefined, logoUrl)}><Eye className="mr-1 h-4 w-4" />Visualizar</Button><Button variant="outline" size="sm" onClick={() => downloadGuia(guia, caixa ?? undefined, logoUrl)}><Download className="mr-1 h-4 w-4" />PDF</Button>{canEditFolhas && !resumo.paga && <Button size="sm" onClick={() => navigate(`/guias/${guia.id}/pagamento`)}><CreditCard className="mr-1 h-4 w-4" />Lançar pagamento</Button>}{canEditFolhas && <FolhaActions folha={guia} />}</div>;
+        const actions = <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => previewGuia(guia, caixa ?? undefined, logoUrl)}><FileText className="mr-1 h-4 w-4" />PDF</Button>{canEditFolhas && !resumo.paga && <Button size="sm" onClick={() => navigate(`/guias/${guia.id}/pagamento`)}><CreditCard className="mr-1 h-4 w-4" />Lançar pagamento</Button>}{canEditFolhas && <FolhaActions folha={guia} />}</div>;
         if (modo === "lista") return <Card key={guia.id}><CardContent className="grid gap-4 p-4 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-center"><div><p className="font-semibold">{guia.centro_custo}</p><p className="text-sm text-muted-foreground">{guia.orgao} · {mesBR(guia.mes_referencia)}</p></div><ResumoParte nome="Servidor" devido={resumo.devidoServidor} pago={resumo.pagoServidor} saldo={resumo.saldoServidor} status={resumo.statusServidor} /><ResumoParte nome="Patronal" devido={resumo.devidoPatronal} pago={resumo.pagoPatronal} saldo={resumo.saldoPatronal} status={resumo.statusPatronal} /><div className="lg:max-w-[300px]">{actions}</div></CardContent></Card>;
         return <Card key={guia.id}><CardContent className="space-y-4 p-5"><div><p className="font-semibold">{guia.centro_custo}</p><p className="text-sm text-muted-foreground">{guia.orgao} · {mesBR(guia.mes_referencia)}</p></div><div className="grid gap-3 sm:grid-cols-2"><ResumoParte nome="Servidor" devido={resumo.devidoServidor} pago={resumo.pagoServidor} saldo={resumo.saldoServidor} status={resumo.statusServidor} /><ResumoParte nome="Patronal" devido={resumo.devidoPatronal} pago={resumo.pagoPatronal} saldo={resumo.saldoPatronal} status={resumo.statusPatronal} /></div>{resumo.pagamentoNaoClassificado > 0 && <p className="text-xs text-warning">Pagamento antigo sem classificação: {fmtBRL(resumo.pagamentoNaoClassificado)}</p>}{actions}</CardContent></Card>;
       })}</div>}

@@ -85,6 +85,7 @@ export function buildGuiaPDF(
   logoDataUrl?: string | null
 ) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
+  doc.setProperties({ title: guiaFileName(folha).replace(/\.pdf$/, "") });
   const M = 36;
   const R = 559;
   const MID = (M + R) / 2;
@@ -272,7 +273,7 @@ export function buildGuiaPDF(
 }
 
 export const guiaFileName = (folha: GuiaFolha) =>
-  `guia-${(folha.centro_custo || "guia").replace(/\s+/g, "-").toLowerCase()}-${folha.mes_referencia}.pdf`;
+  `GRPPS - ${(folha.centro_custo || "guia").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").trim()}.pdf`;
 
 export async function downloadGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null) {
   const isIPPN = /\bippn\b|ponto novo/i.test(`${caixa?.nome ?? ""} ${caixa?.razao_social ?? ""}`);
@@ -280,9 +281,30 @@ export async function downloadGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?
   buildGuiaPDF(folha, caixa, logo).save(guiaFileName(folha));
 }
 
-export async function previewGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null) {
+export async function previewGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null, existingWindow?: Window | null) {
+  const popup = existingWindow ?? window.open("", "_blank");
+  if (!popup) return;
+  popup.opener = null;
   const isIPPN = /\bippn\b|ponto novo/i.test(`${caixa?.nome ?? ""} ${caixa?.razao_social ?? ""}`);
   const logo = await urlToDataUrl(isIPPN ? ippnLogo : logoUrl);
-  const url = buildGuiaPDF(folha, caixa, logo).output("bloburl");
-  window.open(url as unknown as string, "_blank");
+  const url = URL.createObjectURL(buildGuiaPDF(folha, caixa, logo).output("blob"));
+  const page = popup.document;
+  page.title = guiaFileName(folha);
+  page.body.replaceChildren();
+  const download = page.createElement("a");
+  download.href = url;
+  download.download = guiaFileName(folha);
+  download.textContent = "Baixar PDF";
+  const frame = page.createElement("iframe");
+  frame.src = url;
+  frame.title = guiaFileName(folha);
+  frame.width = "100%";
+  frame.style.height = "calc(100vh - 48px)";
+  frame.style.border = "0";
+  const toolbar = page.createElement("nav");
+  toolbar.style.height = "32px";
+  toolbar.style.fontFamily = "Arial, sans-serif";
+  toolbar.append(download);
+  page.body.append(toolbar, frame);
+  popup.addEventListener("beforeunload", () => URL.revokeObjectURL(url), { once: true });
 }
