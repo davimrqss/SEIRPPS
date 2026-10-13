@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Remover somente arquivos e tabelas comprovadamente sem uso, preservando guias, descrições, dados e dependências ativas.
+
 - [x] Liberar qualquer data válida de emissão e vencimento no cadastro, edição e importação; testes aprovados, cadastro autenticado não verificado neste ambiente.
 - [x] Unificar a abertura do PDF e usar o nome GRPPS - descrição da guia; download manual e nome verificados no navegador.
 
