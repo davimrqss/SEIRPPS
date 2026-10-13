@@ -286,56 +286,6 @@ export type Database = {
           },
         ]
       }
-      funcionarios: {
-        Row: {
-          caixa_id: string
-          cargo: string | null
-          cpf: string
-          created_at: string
-          data_nascimento: string | null
-          email: string | null
-          id: string
-          nome: string
-          orgao: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          caixa_id: string
-          cargo?: string | null
-          cpf: string
-          created_at?: string
-          data_nascimento?: string | null
-          email?: string | null
-          id?: string
-          nome: string
-          orgao: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          caixa_id?: string
-          cargo?: string | null
-          cpf?: string
-          created_at?: string
-          data_nascimento?: string | null
-          email?: string | null
-          id?: string
-          nome?: string
-          orgao?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "funcionarios_caixa_id_fkey"
-            columns: ["caixa_id"]
-            isOneToOne: false
-            referencedRelation: "caixas_previdencia"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       orgaos: {
         Row: {
           caixa_id: string
