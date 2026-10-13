@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Liberar qualquer data válida de emissão e vencimento no cadastro e edição.
-- [ ] Unificar a abertura do PDF e usar o nome GRPPS - descrição da guia.
+- [x] Liberar qualquer data válida de emissão e vencimento no cadastro, edição e importação; testes aprovados, cadastro autenticado não verificado neste ambiente.
+- [x] Unificar a abertura do PDF e usar o nome GRPPS - descrição da guia; download manual e nome verificados no navegador.
 
 - [x] Centralizar e ampliar um pouco as logos da guia PDF.
 - [x] Calcular a alíquota pela contribuição digitada no cadastro, mantendo o cálculo inverso por alíquota.
@@ -12,8 +12,8 @@
 - [x] Ajustar fundo branco da logo IPPN e aplicar na visualização e no download das guias da IPPN/Ponto Novo.
 
 - [x] Remover a escolha de tipo da criação e edição da folha, mantendo servidor e patronal juntos.
-- [x] Adicionar data de emissão selecionável para o dia 21, sem preenchimento automático.
-- [x] Manter data de vencimento selecionável para o dia 20, sem preenchimento automático.
+- [x] Adicionar data de emissão selecionável livremente, sem preenchimento automático.
+- [x] Manter data de vencimento selecionável livremente, sem preenchimento automático.
 - [x] Separar centro de custo de órgão pagador no PDF.
 - [x] Exibir a guia servidor antes da guia patronal.
 - [x] Validar a interface e o PDF gerado.
