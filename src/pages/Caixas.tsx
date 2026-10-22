@@ -66,7 +66,7 @@ export default function Caixas() {
         const { error } = await supabase.from("pagamentos").delete().in("folha_id", folhaIds);
         if (error) throw error;
       }
-      for (const tabela of ["folhas_pagamento", "centros_custo", "orgaos", "funcionarios"] as const) {
+      for (const tabela of ["folhas_pagamento", "centros_custo", "descricoes_guias", "orgaos"] as const) {
         const { error } = await supabase.from(tabela).delete().eq("caixa_id", id);
         if (error) throw error;
       }
