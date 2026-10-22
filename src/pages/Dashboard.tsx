@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCaixaAtiva } from "@/hooks/useCaixa";
@@ -17,15 +17,13 @@ import { downloadRelatorioMensal, type LinhaRelatorio } from "@/lib/relatorioPdf
 
 const mesBR = (mes: string) => new Date(`${mes}-01T00:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-const barConfig = {
-  servidor: { label: "Servidor", color: "hsl(var(--primary))" },
-  patronal: { label: "Patronal", color: "hsl(var(--accent))" },
+const valoresConfig = {
+  pago: { label: "Valores pagos", color: "hsl(var(--success))" },
+  aberto: { label: "Valores em aberto", color: "hsl(var(--warning))" },
 } satisfies ChartConfig;
 
-const pieConfig = {
-  pago: { label: "Pago", color: "hsl(var(--success))" },
-  pendente: { label: "Pendente", color: "hsl(var(--warning))" },
-} satisfies ChartConfig;
+const fmtCompacto = (valor: number) =>
+  `R$ ${Number(valor).toLocaleString("pt-BR", { notation: "compact", maximumFractionDigits: 1 })}`;
 
 export default function Dashboard() {
   const { activeCaixaId } = useAuth();
@@ -79,23 +77,33 @@ export default function Dashboard() {
   }, [resumos]);
 
   const colunas = useMemo(() => {
-    const porMes = new Map<string, { mes: string; servidor: number; patronal: number }>();
+    const porMes = new Map<string, { mes: string; pago: number; aberto: number }>();
     relatorio.forEach((linha) => {
-      const atual = porMes.get(linha.mes) ?? { mes: linha.mes, servidor: 0, patronal: 0 };
-      atual.servidor += linha.saldoServidor <= 0.009 ? linha.pagoServidor : linha.saldoServidor;
-      atual.patronal += linha.saldoPatronal <= 0.009 ? linha.pagoPatronal : linha.saldoPatronal;
+      const atual = porMes.get(linha.mes) ?? { mes: linha.mes, pago: 0, aberto: 0 };
+      atual.pago += linha.pagoServidor + linha.pagoPatronal;
+      atual.aberto += Math.max(linha.saldoServidor, 0) + Math.max(linha.saldoPatronal, 0);
       porMes.set(linha.mes, atual);
     });
     return [...porMes.values()].sort((a, b) => a.mes.localeCompare(b.mes)).map((item) => ({
       ...item,
-      label: mesBR(item.mes).replace(" de ", "/"),
+      label: new Date(`${item.mes}-01T00:00:00`).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(". de ", "/").replace(" de ", "/"),
     }));
   }, [relatorio]);
 
+  const totalPago = total.pagoServidor + total.pagoPatronal;
+  const totalAberto = Math.max(total.saldoServidor, 0) + Math.max(total.saldoPatronal, 0);
+  const totalGeral = totalPago + totalAberto;
+  const pct = (valor: number) => (totalGeral > 0 ? `${((valor / totalGeral) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "0%");
+
   const pizza = useMemo(() => [
-    { status: "pago", valor: total.pagoServidor + total.pagoPatronal, fill: "var(--color-pago)" },
-    { status: "pendente", valor: total.saldoServidor + total.saldoPatronal, fill: "var(--color-pendente)" },
-  ].filter((item) => item.valor > 0.009), [total]);
+    { status: "pago", valor: totalPago, fill: "var(--color-pago)" },
+    { status: "aberto", valor: totalAberto, fill: "var(--color-aberto)" },
+  ].filter((item) => item.valor > 0.009), [totalPago, totalAberto]);
+
+  const resumoValores = [
+    { key: "pago", label: "Valores pagos", valor: totalPago, servidor: total.pagoServidor, patronal: total.pagoPatronal },
+    { key: "aberto", label: "Valores em aberto", valor: totalAberto, servidor: Math.max(total.saldoServidor, 0), patronal: Math.max(total.saldoPatronal, 0) },
+  ] as const;
 
   if (isLoading) return <div className="py-20 text-center text-muted-foreground">Carregando...</div>;
 const servidorQuitado = total.saldoServidor <= 0.009;
@@ -189,18 +197,28 @@ return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Servidor e patronal por mês</CardTitle>
+          <CardTitle className="text-base">Valores pagos e em aberto por mês</CardTitle>
         </CardHeader>
         <CardContent>
           {colunas.length ? (
-            <ChartContainer config={barConfig} className="h-72 w-full">
-              <BarChart data={colunas} accessibilityLayer margin={{ left: 8, right: 8 }}>
+            <ChartContainer config={valoresConfig} className="h-80 w-full">
+              <BarChart data={colunas} accessibilityLayer margin={{ top: 28, left: 8, right: 8 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `R$ ${Number(value).toLocaleString("pt-BR", { notation: "compact" })}`} />
-                <ChartTooltip content={<ChartTooltipContent formatter={(value) => fmtBRL(Number(value))} />} />
-                <Bar dataKey="servidor" fill="var(--color-servidor)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="patronal" fill="var(--color-patronal)" radius={[4, 4, 0, 0]} />
+                <YAxis tickLine={false} axisLine={false} width={64} tickFormatter={(value) => fmtCompacto(Number(value))} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => (
+                  <div className="flex min-w-44 items-center justify-between gap-3">
+                    <span>{valoresConfig[name as keyof typeof valoresConfig]?.label}</span>
+                    <span className="font-mono font-medium tabular-nums">{fmtBRL(Number(value))}</span>
+                  </div>
+                )} />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="pago" fill="var(--color-pago)" radius={[4, 4, 0, 0]}>
+                  <LabelList dataKey="pago" position="top" className="fill-foreground" fontSize={11} fontWeight={600} formatter={(v: number) => (v > 0.009 ? fmtCompacto(v) : "")} />
+                </Bar>
+                <Bar dataKey="aberto" fill="var(--color-aberto)" radius={[4, 4, 0, 0]}>
+                  <LabelList dataKey="aberto" position="top" className="fill-foreground" fontSize={11} fontWeight={600} formatter={(v: number) => (v > 0.009 ? fmtCompacto(v) : "")} />
+                </Bar>
               </BarChart>
             </ChartContainer>
           ) : (
@@ -211,23 +229,49 @@ return (
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Distribuição dos valores</CardTitle>
+          <CardTitle className="text-base">Situação das guias</CardTitle>
         </CardHeader>
         <CardContent>
           {pizza.length ? (
-            <ChartContainer config={pieConfig} className="h-72 w-full">
-              <PieChart accessibilityLayer>
-                <ChartTooltip content={<ChartTooltipContent hideLabel formatter={(value, name) => (
-                  <div className="flex min-w-36 items-center justify-between gap-3">
-                    <span>{pieConfig[name as keyof typeof pieConfig]?.label}</span>
-                    <span className="font-mono font-medium tabular-nums">{fmtBRL(Number(value))}</span>
+            <div className="grid items-center gap-4 sm:grid-cols-[1fr_1fr]">
+              <div className="relative">
+                <ChartContainer config={valoresConfig} className="mx-auto aspect-square h-60">
+                  <PieChart accessibilityLayer>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel formatter={(value, name) => (
+                      <div className="flex min-w-44 items-center justify-between gap-3">
+                        <span>{valoresConfig[name as keyof typeof valoresConfig]?.label}</span>
+                        <span className="font-mono font-medium tabular-nums">{fmtBRL(Number(value))}</span>
+                      </div>
+                    )} />} />
+                    <Pie data={pizza} dataKey="valor" nameKey="status" innerRadius={62} outerRadius={96} paddingAngle={2}>
+                      {pizza.map((item) => <Cell key={item.status} fill={item.fill} />)}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xs text-muted-foreground">Total das guias</span>
+                  <span className="text-sm font-bold text-foreground">{fmtBRL(totalGeral)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {resumoValores.map((item) => (
+                  <div key={item.key} className="rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <span className={`h-3 w-3 rounded-sm ${item.key === "pago" ? "bg-success" : "bg-warning"}`} />
+                        {item.label}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">{pct(item.valor)}</span>
+                    </div>
+                    <p className="mt-1 text-lg font-bold text-foreground">{fmtBRL(item.valor)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Servidor {fmtBRL(item.servidor)} · Patronal {fmtBRL(item.patronal)}
+                    </p>
                   </div>
-                )} />} />
-                <Pie data={pizza} dataKey="valor" nameKey="status" innerRadius={58} outerRadius={92} paddingAngle={2}>
-                  {pizza.map((item) => <Cell key={item.status} fill={item.fill} />)}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
+                ))}
+              </div>
+            </div>
           ) : (
             <p className="py-20 text-center text-muted-foreground">Sem dados para exibir.</p>
           )}

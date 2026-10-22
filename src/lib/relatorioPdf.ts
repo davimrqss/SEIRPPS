@@ -29,7 +29,7 @@ export function downloadRelatorioMensal(
 
   autoTable(doc, {
     startY: 76,
-    head: [["Mês", "Órgão", "Remuneração", "Base", "Devido serv.", "Pago serv.", "Saldo serv.", "Devido patr.", "Pago patr.", "Saldo patr."]],
+    head: [["Mês", "Órgão", "Remuneração", "Base", "Devido serv.", "Pago serv.", "Saldo devedor servidor", "Devido patr.", "Pago patr.", "Saldo devedor patronal"]],
     body: linhas.map((l) => [mesBR(l.mes), l.orgao, fmtBRL(l.remuneracao), fmtBRL(l.base), fmtBRL(l.devidoServidor), fmtBRL(l.pagoServidor), fmtBRL(l.saldoServidor), fmtBRL(l.devidoPatronal), fmtBRL(l.pagoPatronal), fmtBRL(l.saldoPatronal)]),
     styles: { font: "helvetica", fontSize: 7, cellPadding: 4 },
     headStyles: { fillColor: [30, 120, 95] },
@@ -48,6 +48,6 @@ export function downloadRelatorioMensal(
   }), { remuneracao: 0, base: 0, devidoServidor: 0, devidoPatronal: 0, pagoServidor: 0, pagoPatronal: 0, saldoServidor: 0, saldoPatronal: 0 });
   const finalY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 100;
   doc.setFont("helvetica", "bold").setFontSize(9);
-  doc.text(`Total: remuneração ${fmtBRL(total.remuneracao)} · base ${fmtBRL(total.base)} · saldo servidor ${fmtBRL(total.saldoServidor)} · saldo patronal ${fmtBRL(total.saldoPatronal)}`, 40, finalY + 22);
+  doc.text(`Total: remuneração ${fmtBRL(total.remuneracao)} · base ${fmtBRL(total.base)} · saldo devedor servidor ${fmtBRL(total.saldoServidor)} · saldo devedor patronal ${fmtBRL(total.saldoPatronal)}`, 40, finalY + 22);
   doc.save(`panorama-previdenciario-${periodo.replace(/\s+/g, "-").toLowerCase()}.pdf`);
 }
