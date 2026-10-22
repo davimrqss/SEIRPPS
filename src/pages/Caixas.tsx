@@ -66,7 +66,7 @@ export default function Caixas() {
         const { error } = await supabase.from("pagamentos").delete().in("folha_id", folhaIds);
         if (error) throw error;
       }
-      for (const tabela of ["folhas_pagamento", "centros_custo", "orgaos", "funcionarios"] as const) {
+      for (const tabela of ["folhas_pagamento", "centros_custo", "descricoes_guias", "orgaos"] as const) {
         const { error } = await supabase.from(tabela).delete().eq("caixa_id", id);
         if (error) throw error;
       }
@@ -190,8 +190,8 @@ export default function Caixas() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir esta caixa de previdência?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{removendo?.nome}</strong> será removida junto com suas folhas, pagamentos,
-              centros de custo, órgãos e funcionários. Esta ação não pode ser desfeita.
+              <strong>{removendo?.nome}</strong> será removida junto com suas guias, pagamentos,
+              descrições e órgãos. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
