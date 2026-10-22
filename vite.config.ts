@@ -19,4 +19,9 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  optimizeDeps: {
+    // Pre-bundle core libs so a newly used import never triggers a mid-session
+    // re-optimization that mixes two React copies (null dispatcher crash).
+    include: ["react", "react-dom", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "react-router-dom", "recharts"],
+  },
 }));
