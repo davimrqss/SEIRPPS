@@ -190,8 +190,8 @@ export default function Caixas() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir esta caixa de previdência?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{removendo?.nome}</strong> será removida junto com suas folhas, pagamentos,
-              centros de custo, órgãos e funcionários. Esta ação não pode ser desfeita.
+              <strong>{removendo?.nome}</strong> será removida junto com suas guias, pagamentos,
+              descrições e órgãos. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
