@@ -264,6 +264,15 @@ export default function CentrosCusto() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConfirmarExclusaoEmMassa
+        open={excluirVarios}
+        onOpenChange={setExcluirVarios}
+        titulo={`Excluir ${selecao.selecionados.length} descrição(ões)?`}
+        descricao="As descrições selecionadas serão removidas. As guias já cadastradas não são alteradas."
+        excluindo={excluindoVarios}
+        onConfirm={handleDeleteSelecionados}
+      />
     </div>
   );
 }
