@@ -138,7 +138,7 @@ export default function ImportarGuias() {
       const porLinha = new Map<number, AiRow>();
       resultados.flat().forEach((row) => { if (!porLinha.has(row.linha)) porLinha.set(row.linha, row); });
       const data = { rows: [...porLinha.values()].sort((a, b) => a.linha - b.linha) };
-      const aiRows = ((data as { rows?: AiRow[] })?.rows ?? []).filter((row) => row.base_calculo > 0 || row.valor_servidor > 0 || row.valor_patronal > 0);
+      const aiRows = data.rows.filter((row) => row.base_calculo > 0 || row.valor_servidor > 0 || row.valor_patronal > 0);
       if (!aiRows.length) throw new Error("Nenhuma descrição com valores foi encontrada nesta aba.");
       setRows(aiRows.map((row, index) => {
         const centro = centros.find((item) => row.codigo && item.codigo?.trim() === row.codigo.trim())
