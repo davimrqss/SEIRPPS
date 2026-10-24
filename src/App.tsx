@@ -11,6 +11,7 @@ import { PermissionRoute } from "@/components/PermissionRoute";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import NovaFolha from "./pages/NovaFolha";
+import ImportarGuias from "./pages/ImportarGuias";
 import LancarPagamento from "./pages/LancarPagamento";
 import GuiasPDF from "./pages/GuiasPDF";
 import Cadastro from "./pages/Cadastro";
@@ -45,7 +46,8 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/folhas" element={<Navigate to="/guias" replace />} />
               <Route path="/folhas/nova" element={<Navigate to="/guias/cadastrar" replace />} />
-              <Route path="/folhas/importar" element={<Navigate to="/guias/cadastrar" replace />} />
+              <Route path="/folhas/importar" element={<Navigate to="/guias/importar" replace />} />
+              <Route path="/guias/importar" element={<PermissionRoute permission="editarGuias"><ImportarGuias /></PermissionRoute>} />
               <Route path="/guias/cadastrar" element={<PermissionRoute permission="editarGuias"><NovaFolha /></PermissionRoute>} />
               <Route path="/guias" element={<GuiasPDF />} />
               <Route path="/guias/:folhaId/pagamento" element={<PermissionRoute permission="editarGuias"><LancarPagamento /></PermissionRoute>} />

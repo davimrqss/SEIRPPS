@@ -12,13 +12,12 @@ import { CurrencyInput } from "@/components/CurrencyInput";
 import { DateField } from "@/components/DateField";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCaixaAtiva, useLogoUrl } from "@/hooks/useCaixa";
+import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { useOrgaos } from "@/hooks/useCadastros";
 import { supabase } from "@/integrations/supabase/client";
 import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
 import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia } from "@/lib/guiaCalculations";
 import { CorrecaoMonetaria } from "@/components/CorrecaoMonetaria";
-import { previewGuia } from "@/lib/guiaPdf";
 import { guiaDatesSchema } from "@/lib/guiaDates";
 import type { Tables } from "@/integrations/supabase/types";
 import { z } from "zod";
@@ -39,7 +38,6 @@ export default function NovaFolha() {
   const queryClient = useQueryClient();
   const { activeCaixaId } = useAuth();
   const { data: caixa } = useCaixaAtiva();
-  const { data: logoUrl } = useLogoUrl(caixa?.logo_url);
   const { data: orgaos = [] } = useOrgaos();
   const [loading, setLoading] = useState(false);
   const [salvarDescricao, setSalvarDescricao] = useState(false);
@@ -112,7 +110,6 @@ export default function NovaFolha() {
     }
     const orgao = orgaos.find((item) => item.id === form.orgaoId);
     if (!orgao) return;
-    const popup = window.open("", "_blank");
     setLoading(true);
     const payload = {
       caixa_id: activeCaixaId, centro_custo: form.descricao.trim(), codigo_centro_custo: null,
@@ -128,7 +125,7 @@ export default function NovaFolha() {
     };
     const { data: guia, error } = await supabase.from("folhas_pagamento").insert(payload).select().single();
     if (error || !guia) {
-      popup?.close(); setLoading(false);
+      setLoading(false);
       toast({ title: "Erro ao cadastrar guia", description: safeErrorMessage("Não foi possível cadastrar a guia"), variant: "destructive" });
       return;
     }
@@ -142,14 +139,13 @@ export default function NovaFolha() {
     if (pagamentos.length) await supabase.from("pagamentos").insert(pagamentos);
     const paga = pagamentoServidor + 0.009 >= preview.devidoServidor && pagamentoPatronal + 0.009 >= preview.devidoPatronal;
     if (paga) await supabase.from("folhas_pagamento").update({ paga: true }).eq("id", guia.id);
-    await previewGuia(guia, caixa ?? undefined, logoUrl, popup);
     setLoading(false);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["folhas-guias"] }),
       queryClient.invalidateQueries({ queryKey: ["folhas-dashboard"] }),
       queryClient.invalidateQueries({ queryKey: ["descricoes-guias"] }),
     ]);
-    toast({ title: "Guia cadastrada!", description: "O PDF foi aberto em uma nova aba." });
+    toast({ title: "Guia cadastrada!", description: "Clique em PDF na lista para abrir a guia." });
     navigate("/guias");
   };
 
@@ -376,7 +372,7 @@ return (
         <div className="flex justify-end">
           <Button type="submit" size="lg" disabled={loading}>
             <Save className="h-4 w-4 mr-2" />
-            {loading ? "Cadastrando..." : "Cadastrar e visualizar PDF"}
+            {loading ? "Cadastrando..." : "Cadastrar Guia"}
           </Button>
         </div>
       </form>
