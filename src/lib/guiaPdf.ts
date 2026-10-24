@@ -84,8 +84,30 @@ export function buildGuiaPDF(
   caixa: GuiaCaixa = {},
   logoDataUrl?: string | null
 ) {
+  return buildGuiasPDF([folha], caixa, logoDataUrl);
+}
+
+/** Gera um único PDF com uma guia por página, na ordem recebida. */
+export function buildGuiasPDF(
+  folhas: GuiaFolha[],
+  caixa: GuiaCaixa = {},
+  logoDataUrl?: string | null
+) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  doc.setProperties({ title: guiaFileName(folha).replace(/\.pdf$/, "") });
+  doc.setProperties({ title: guiasFileName(folhas).replace(/\.pdf$/, "") });
+  folhas.forEach((folha, i) => {
+    if (i > 0) doc.addPage();
+    drawGuia(doc, folha, caixa, logoDataUrl);
+  });
+  return doc;
+}
+
+function drawGuia(
+  doc: jsPDF,
+  folha: GuiaFolha,
+  caixa: GuiaCaixa,
+  logoDataUrl?: string | null
+) {
   const M = 36;
   const R = 559;
   const MID = (M + R) / 2;
