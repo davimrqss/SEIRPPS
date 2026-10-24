@@ -26,7 +26,7 @@ const RowSchema = z.object({
 });
 const ResultSchema = z.object({ rows: z.array(RowSchema).max(300) });
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const SYSTEM_PROMPT = `Você lê planilhas brasileiras de resumo de base de cálculo previdenciária (RPPS). A planilha chega como linhas separadas por TAB; cada linha começa com "L<número>" indicando o número real da linha no Excel. Identifique as linhas de cabeçalho e use-as para mapear as colunas.
@@ -71,7 +71,6 @@ async function callGemini(apiKey: string, sheetName: string, text: string, signa
     generationConfig: {
       responseMimeType: "application/json",
       responseJsonSchema: { type: "object", properties: { rows: { type: "array", items: rowJsonSchema } }, required: ["rows"] },
-      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
@@ -97,6 +96,7 @@ async function callGemini(apiKey: string, sheetName: string, text: string, signa
       console.error("Gemini error", response.status, JSON.stringify(payload)?.slice(0, 500));
       if (response.status === 401 || response.status === 403) throw fail("A chave do Google AI não foi aceita. Verifique a chave no Google AI Studio.", 403);
       if (response.status === 429) throw fail("O limite temporário da API do Google foi atingido. Aguarde alguns minutos e tente novamente.", 429);
+      if (response.status === 404) throw fail("O modelo do Google Gemini usado pela importação não está disponível para esta chave.", 404);
       if (response.status === 400) throw fail("O Google Gemini não aceitou o conteúdo desta aba.", 400);
       throw fail("O Google Gemini está temporariamente indisponível. Tente novamente em instantes.", 503);
     }
