@@ -18,7 +18,7 @@ import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { useCentrosCusto, useOrgaos } from "@/hooks/useCadastros";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
-import { fmtBRL, parseCurrency } from "@/lib/format";
+import { currencyToInput, fmtBRL, parseCurrency } from "@/lib/format";
 import { guiaDatesSchema } from "@/lib/guiaDates";
 import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia, type Guia } from "@/lib/guiaCalculations";
 import { detectarColunas, extrairGuias, isAbaMensal, lerPlanilha, type AbaPlanilha, type GuiaPlanilha, type MapaColunas } from "@/lib/planilhaGuias";
@@ -28,7 +28,7 @@ type AiRow = GuiaPlanilha;
 type ReviewRow = AiRow & { id: string; selected: boolean; orgaoId: string };
 type MoneyKey = "remuneracao" | "base_calculo" | "valor_servidor" | "valor_patronal" | "salario_familia" | "salario_maternidade" | "aux_doenca";
 
-const moneyText = (value: number) => (value ? value.toFixed(2).replace(".", ",") : "");
+const moneyText = (value: number) => currencyToInput(value);
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\W/g, "");
 const LINHAS_AMOSTRA = 30;
 const isDate = (value: string) => z.string().date().safeParse(value).success;

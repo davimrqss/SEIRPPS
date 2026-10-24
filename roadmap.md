@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Cadastrar guia sem abrir o PDF automaticamente; botão "Cadastrar Guia".
+- [x] Importar guias por planilha Excel (aba por mês), com Gemini identificando colunas de modelos desconhecidos; revisão testada com a aba JANEIRO (35 guias, totais iguais à planilha); gravação final não testada para não criar dados reais.
+
 - [x] Remover somente arquivos e tabelas comprovadamente sem uso, preservando guias, descrições, dados e dependências ativas.
 
 - [x] Liberar qualquer data válida de emissão e vencimento no cadastro, edição e importação; testes aprovados, cadastro autenticado não verificado neste ambiente.
@@ -28,7 +31,6 @@
 - [x] Migrar a análise da importação de PDFs para a API direta do Google Gemini.
 - [x] Aceitar o formato atual da chave da Google AI API sem exigir prefixo específico.
 - [x] Processar PDFs grandes em lotes e consolidar os centros sem duplicidade.
-- [ ] Publicar e testar a função Gemini no PrevSYS — bloqueado neste ambiente por falta de autorização da ferramenta de publicação.
 - [x] Reformular Folhas de Pagamento para Cadastrar Guia e Guias de Recolhimento.
 - [x] Criar descrições independentes de órgãos, com seleção, texto livre e cadastro opcional.
 - [x] Adicionar juros, multa e correção por alíquotas separadas para servidor e patronal.
