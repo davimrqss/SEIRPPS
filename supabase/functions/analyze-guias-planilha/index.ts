@@ -71,6 +71,7 @@ async function callGemini(apiKey: string, sheetName: string, text: string, signa
     generationConfig: {
       responseMimeType: "application/json",
       responseJsonSchema: { type: "object", properties: { rows: { type: "array", items: rowJsonSchema } }, required: ["rows"] },
+      thinkingConfig: { thinkingLevel: "minimal" },
     },
   };
 
