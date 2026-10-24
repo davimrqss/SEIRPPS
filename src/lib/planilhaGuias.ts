@@ -48,3 +48,16 @@ export async function lerPlanilha(file: File): Promise<AbaPlanilha[]> {
     return { nome, ...linhasParaTexto(linhas, range.s.r + 1) };
   });
 }
+
+/** Split a sheet into small batches, repeating the header lines so each AI call stays fast. */
+export function dividirEmLotes(texto: string, tamanho = 12) {
+  const linhas = texto.split("\n").filter(Boolean);
+  const numericas = (linha: string) => linha.split("\t").slice(1).filter((cell) => /^-?\d+(\.\d+)?$/.test(cell) && cell !== "0").length;
+  const inicio = linhas.findIndex((linha) => numericas(linha) >= 3);
+  if (inicio < 0) return [texto];
+  const cabecalho = linhas.slice(0, inicio);
+  const dados = linhas.slice(inicio);
+  const lotes: string[] = [];
+  for (let i = 0; i < dados.length; i += tamanho) lotes.push([...cabecalho, ...dados.slice(i, i + tamanho)].join("\n"));
+  return lotes;
+}

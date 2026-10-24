@@ -20,3 +20,14 @@ describe("planilha de guias", () => {
     expect(valoresConferem([119238.59, 85629.76, 9419.28], [119238.59, 85629.76, 9491.28])).toBe(false);
   });
 });
+
+describe("lotes da planilha", () => {
+  it("repete o cabeçalho em cada lote", async () => {
+    const { dividirEmLotes } = await import("@/lib/planilhaGuias");
+    const dados = Array.from({ length: 5 }, (_, i) => `L${i + 4}\t\tCentro ${i}\t100\t90\t9.9`);
+    const lotes = dividirEmLotes(["L3\t\tCentro de Custo\tRemuneração", ...dados].join("\n"), 2);
+    expect(lotes).toHaveLength(3);
+    expect(lotes.every((lote) => lote.startsWith("L3\t\tCentro de Custo"))).toBe(true);
+    expect(lotes[2].split("\n")).toHaveLength(2);
+  });
+});
