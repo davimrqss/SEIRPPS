@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateField } from "@/components/DateField";
 import { CurrencyInput } from "@/components/CurrencyInput";
@@ -22,22 +21,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { fmtBRL, parseCurrency } from "@/lib/format";
 import { guiaDatesSchema } from "@/lib/guiaDates";
 import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia, type Guia } from "@/lib/guiaCalculations";
-import { dividirEmLotes, isAbaMensal, lerPlanilha, valoresConferem, type AbaPlanilha } from "@/lib/planilhaGuias";
+import { extrairGuias, isAbaMensal, lerPlanilha, type AbaPlanilha, type GuiaPlanilha, type MapaColunas } from "@/lib/planilhaGuias";
 import { safeErrorMessage } from "@/lib/safeError";
 
-type AiRow = {
-  linha: number; codigo: string; descricao: string; remuneracao: number; base_calculo: number;
-  salario_familia: number; salario_maternidade: number; aux_doenca: number;
-  valor_servidor: number; valor_patronal: number; pago_servidor: number; data_pagamento_servidor: string;
-  pago_patronal: number; data_pagamento_patronal: string; observacoes: string;
-};
-type ReviewRow = AiRow & { id: string; selected: boolean; orgaoId: string; confere: boolean };
+type AiRow = GuiaPlanilha;
+type ReviewRow = AiRow & { id: string; selected: boolean; orgaoId: string };
 type MoneyKey = "remuneracao" | "base_calculo" | "valor_servidor" | "valor_patronal" | "salario_familia" | "salario_maternidade" | "aux_doenca";
 
 const moneyText = (value: number) => (value ? value.toFixed(2).replace(".", ",") : "");
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\W/g, "");
-const LOTE_LINHAS = 5;
-const LOTES_SIMULTANEOS = 5;
+const LINHAS_AMOSTRA = 30;
 const isDate = (value: string) => z.string().date().safeParse(value).success;
 const MONEY_FIELDS: [string, MoneyKey][] = [
   ["Remuneração", "remuneracao"], ["Base de cálculo", "base_calculo"], ["Contribuição servidor", "valor_servidor"],
@@ -58,7 +51,6 @@ export default function ImportarGuias() {
   const [abas, setAbas] = useState<AbaPlanilha[]>([]);
   const [abaNome, setAbaNome] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
-  const [progresso, setProgresso] = useState({ feitos: 0, total: 0 });
   const [error, setError] = useState("");
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [emissao, setEmissao] = useState("");
@@ -111,43 +103,25 @@ export default function ImportarGuias() {
   const analyze = async () => {
     const aba = abas.find((item) => item.nome === abaNome);
     if (!aba || !canEditFolhas) return;
-    if (aba.texto.length > 80_000) return void setError("Esta aba é grande demais para análise. Remova colunas ou linhas que não são usadas.");
-    setError(""); setRows([]); setAnalyzing(true);
+        setError(""); setRows([]); setAnalyzing(true);
     try {
-      const lotes = dividirEmLotes(aba.texto, LOTE_LINHAS);
-      let concluidos = 0;
-      setProgresso({ feitos: 0, total: lotes.length });
-      const analisarLote = async (text: string) => {
-        const { data, error: fnError } = await supabase.functions.invoke("analyze-guias-planilha", { body: { sheetName: aba.nome, text } });
-        if (fnError) {
-          let message = "Não foi possível analisar a planilha. Tente novamente.";
-          try {
-            const body = await (fnError as { context?: Response }).context?.json();
-            if (typeof body?.error === "string") message = body.error;
-          } catch { /* mantém a mensagem padrão */ }
-          throw new Error(message);
-        }
-        concluidos += 1;
-        setProgresso({ feitos: concluidos, total: lotes.length });
-        return (data as { rows?: AiRow[] })?.rows ?? [];
-      };
-      const resultados: AiRow[][] = [];
-      for (let i = 0; i < lotes.length; i += LOTES_SIMULTANEOS) {
-        resultados.push(...await Promise.all(lotes.slice(i, i + LOTES_SIMULTANEOS).map(analisarLote)));
+      const amostra = aba.texto.split("\n").slice(0, LINHAS_AMOSTRA).join("\n");
+      const { data, error: fnError } = await supabase.functions.invoke("analyze-guias-planilha", { body: { sheetName: aba.nome, text: amostra } });
+      if (fnError) {
+        let message = "Não foi possível analisar a planilha. Tente novamente.";
+        try {
+          const body = await (fnError as { context?: Response }).context?.json();
+          if (typeof body?.error === "string") message = body.error;
+        } catch { /* mantém a mensagem padrão */ }
+        throw new Error(message);
       }
-      const porLinha = new Map<number, AiRow>();
-      resultados.flat().forEach((row) => { if (!porLinha.has(row.linha)) porLinha.set(row.linha, row); });
-      const data = { rows: [...porLinha.values()].sort((a, b) => a.linha - b.linha) };
-      const aiRows = data.rows.filter((row) => row.base_calculo > 0 || row.valor_servidor > 0 || row.valor_patronal > 0);
+      const aiRows = extrairGuias(aba, data as MapaColunas);
       if (!aiRows.length) throw new Error("Nenhuma descrição com valores foi encontrada nesta aba.");
       setRows(aiRows.map((row, index) => {
         const centro = centros.find((item) => row.codigo && item.codigo?.trim() === row.codigo.trim())
           ?? centros.find((item) => normalize(item.nome) === normalize(row.descricao));
         const orgaoId = centro?.orgao_id ?? "";
-        const confere = valoresConferem(aba.valoresPorLinha.get(row.linha), [
-          row.remuneracao, row.base_calculo, row.valor_servidor, row.valor_patronal, row.pago_servidor, row.pago_patronal,
-        ]);
-        return { ...row, descricao: row.descricao.trim(), id: `${row.linha}-${index}`, orgaoId, confere, selected: true };
+        return { ...row, id: `${row.linha}-${index}`, orgaoId, selected: true };
       }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível analisar a planilha. Tente novamente.");
@@ -237,7 +211,7 @@ export default function ImportarGuias() {
             <div className="rounded-full bg-primary/10 p-4"><FileSpreadsheet className="h-9 w-9 text-primary" /></div>
             <div>
               <h2 className="text-lg font-semibold">Selecione a planilha</h2>
-              <p className="mt-1 max-w-lg text-sm text-muted-foreground">A planilha não é armazenada. O Google Gemini lê a aba escolhida e separa uma guia para cada descrição.</p>
+              <p className="mt-1 max-w-lg text-sm text-muted-foreground">A planilha não é armazenada. O Google Gemini identifica as colunas da aba escolhida e os valores são copiados exatamente da planilha, uma guia por descrição.</p>
             </div>
             <Input ref={inputRef} className="hidden" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
               onChange={(event) => { void chooseFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
@@ -254,12 +228,7 @@ export default function ImportarGuias() {
                 </Select>
               </div>
             )}
-            {analyzing && (
-              <div className="w-full max-w-md space-y-2">
-                <Progress value={progresso.total ? Math.max(5, (progresso.feitos / progresso.total) * 100) : 5} className="h-2" />
-                <p className="flex items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Lendo a aba {abaNome} com o Google Gemini · parte {progresso.feitos} de {progresso.total}. Isso pode levar alguns minutos.</p>
-              </div>
-            )}
+            {analyzing && <p className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />O Google Gemini está identificando as colunas da aba {abaNome}. Isso pode levar até 2 minutos.</p>}
             {error && <Alert variant="destructive" className="max-w-xl text-left"><AlertCircle className="h-4 w-4" /><AlertTitle>Não foi possível analisar</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
             <Button disabled={!abaNome || analyzing} onClick={analyze}><Sparkles className="mr-2 h-4 w-4" />Analisar com IA</Button>
           </CardContent>
@@ -299,8 +268,7 @@ export default function ImportarGuias() {
               const duplicate = isDuplicate(row);
               const alerta = duplicate ? "Já existe uma guia com esta descrição no mês do vencimento. A linha foi desmarcada."
                 : !row.orgaoId ? "Escolha o órgão pagador desta guia."
-                : !row.confere ? `Confira os valores: alguns não foram encontrados na linha ${row.linha} da planilha.`
-                : row.observacoes;
+                : "";
               return (
                 <Card key={row.id} className={alerta ? "border-warning" : undefined}>
                   <CardContent className="p-4 sm:p-5">
