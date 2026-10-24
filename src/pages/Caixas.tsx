@@ -13,6 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { safeErrorMessage } from "@/lib/safeError";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useSelecao } from "@/hooks/useSelecao";
+import {
+  BarraSelecao, BotaoExcluirSelecionados, CheckboxTodos, ConfirmarExclusaoEmMassa,
+} from "@/components/SelecaoEmMassa";
 
 export default function Caixas() {
   const { canEditCaixasEOrgaos } = usePermissions();
@@ -52,40 +57,48 @@ export default function Caixas() {
     navigate(`/caixas/${data.id}`);
   };
 
+  /** Remove a caixa e tudo o que pertence a ela, na ordem das dependências. */
+  const excluirUma = async (id: string) => {
+    const { data: folhas, error: folhasErr } = await supabase
+      .from("folhas_pagamento")
+      .select("id")
+      .eq("caixa_id", id);
+    if (folhasErr) throw folhasErr;
+    const folhaIds = (folhas ?? []).map((f) => f.id);
+    if (folhaIds.length) {
+      const { error } = await supabase.from("pagamentos").delete().in("folha_id", folhaIds);
+      if (error) throw error;
+    }
+    for (const tabela of ["folhas_pagamento", "centros_custo", "descricoes_guias", "orgaos"] as const) {
+      const { error } = await supabase.from(tabela).delete().eq("caixa_id", id);
+      if (error) throw error;
+    }
+    const { error: profErr } = await supabase
+      .from("profiles")
+      .update({ caixa_id: null })
+      .eq("caixa_id", id);
+    if (profErr) throw profErr;
+    const { error } = await supabase.from("caixas_previdencia").delete().eq("id", id);
+    if (error) throw error;
+  };
+
+  const atualizarListas = () => {
+    queryClient.invalidateQueries({ queryKey: ["caixas-lista"] });
+    queryClient.invalidateQueries({ queryKey: ["caixas"] });
+    queryClient.invalidateQueries({ queryKey: ["caixa"] });
+  };
+
   const excluirCaixa = async () => {
     if (!removendo) return;
     setExcluindo(true);
-    const id = removendo.id;
     try {
-      const { data: folhas } = await supabase
-        .from("folhas_pagamento")
-        .select("id")
-        .eq("caixa_id", id);
-      const folhaIds = (folhas ?? []).map((f) => f.id);
-      if (folhaIds.length) {
-        const { error } = await supabase.from("pagamentos").delete().in("folha_id", folhaIds);
-        if (error) throw error;
-      }
-      for (const tabela of ["folhas_pagamento", "centros_custo", "descricoes_guias", "orgaos"] as const) {
-        const { error } = await supabase.from(tabela).delete().eq("caixa_id", id);
-        if (error) throw error;
-      }
-      const { error: profErr } = await supabase
-        .from("profiles")
-        .update({ caixa_id: null })
-        .eq("caixa_id", id);
-      if (profErr) throw profErr;
-      const { error } = await supabase.from("caixas_previdencia").delete().eq("id", id);
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ["caixas-lista"] });
-      queryClient.invalidateQueries({ queryKey: ["caixas"] });
-      queryClient.invalidateQueries({ queryKey: ["caixa"] });
+      await excluirUma(removendo.id);
       setRemovendo(null);
       toast.success("Caixa de previdência excluída.");
     } catch {
       toast.error(safeErrorMessage("Não foi possível excluir a caixa"));
     } finally {
+      atualizarListas();
       setExcluindo(false);
     }
   };
@@ -95,6 +108,35 @@ export default function Caixas() {
       (v ?? "").toLowerCase().includes(busca.toLowerCase())
     )
   );
+
+  const selecao = useSelecao(filtradas.map((c) => c.id));
+  const [excluirVarias, setExcluirVarias] = useState(false);
+  const [excluindoVarias, setExcluindoVarias] = useState(false);
+
+  const excluirSelecionadas = async () => {
+    setExcluindoVarias(true);
+    let excluidas = 0;
+    try {
+      for (const id of selecao.selecionados) {
+        await excluirUma(id);
+        excluidas += 1;
+      }
+      toast.success(`${excluidas} caixa(s) de previdência excluída(s).`);
+      setExcluirVarias(false);
+    } catch {
+      toast.error(
+        safeErrorMessage(
+          excluidas
+            ? `${excluidas} caixa(s) excluída(s); não foi possível excluir as demais`
+            : "Não foi possível excluir as caixas"
+        )
+      );
+    } finally {
+      selecao.limpar();
+      atualizarListas();
+      setExcluindoVarias(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="py-20 text-center text-muted-foreground">Carregando...</div>;
@@ -115,7 +157,7 @@ export default function Caixas() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -125,12 +167,22 @@ export default function Caixas() {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
+          {canEditCaixasEOrgaos && (
+            <BarraSelecao quantidade={selecao.selecionados.length} onLimpar={selecao.limpar}>
+              <BotaoExcluirSelecionados onClick={() => setExcluirVarias(true)} />
+            </BarraSelecao>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  {canEditCaixasEOrgaos && (
+                    <th className="w-10 py-3 pl-4">
+                      <CheckboxTodos todos={selecao.todos} parcial={selecao.parcial} onChange={selecao.alternarTodos} />
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Nome</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Empresa</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">CNPJ</th>
@@ -141,7 +193,7 @@ export default function Caixas() {
               <tbody>
                 {filtradas.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={6} className="py-12 text-center text-muted-foreground">
                       <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       Nenhuma caixa encontrada
                     </td>
@@ -149,6 +201,12 @@ export default function Caixas() {
                 ) : (
                   filtradas.map((c) => (
                     <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30">
+                      {canEditCaixasEOrgaos && (
+                        <td className="py-3 pl-4">
+                          <Checkbox aria-label={`Selecionar ${c.nome}`} checked={selecao.estaMarcado(c.id)}
+                            onCheckedChange={() => selecao.alternar(c.id)} />
+                        </td>
+                      )}
                       <td className="py-3 px-4 font-medium text-foreground">{c.nome}</td>
                       <td className="py-3 px-4 text-muted-foreground">{c.empresa ?? "-"}</td>
                       <td className="py-3 px-4 text-muted-foreground font-mono text-xs">{c.cnpj ?? "-"}</td>
@@ -206,6 +264,15 @@ export default function Caixas() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConfirmarExclusaoEmMassa
+        open={excluirVarias}
+        onOpenChange={setExcluirVarias}
+        titulo={`Excluir ${selecao.selecionados.length} caixa(s) de previdência?`}
+        descricao="As caixas selecionadas serão removidas junto com suas guias, pagamentos, descrições e órgãos. Esta ação não pode ser desfeita."
+        excluindo={excluindoVarias}
+        onConfirm={excluirSelecionadas}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Seleção múltipla e "selecionar tudo" em Descrições, Órgãos, Caixas e Guias, com exclusão em massa e PDF único das guias selecionadas; seleção e PDF conferidos no navegador, exclusão em massa não executada para preservar dados reais.
 - [x] Cadastrar guia sem abrir o PDF automaticamente; botão "Cadastrar Guia".
 - [x] Importar guias por planilha Excel (aba por mês), com Gemini identificando colunas de modelos desconhecidos; revisão testada com a aba JANEIRO (35 guias, totais iguais à planilha); gravação final não testada para não criar dados reais.
 

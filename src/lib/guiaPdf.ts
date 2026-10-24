@@ -84,8 +84,30 @@ export function buildGuiaPDF(
   caixa: GuiaCaixa = {},
   logoDataUrl?: string | null
 ) {
+  return buildGuiasPDF([folha], caixa, logoDataUrl);
+}
+
+/** Gera um único PDF com uma guia por página, na ordem recebida. */
+export function buildGuiasPDF(
+  folhas: GuiaFolha[],
+  caixa: GuiaCaixa = {},
+  logoDataUrl?: string | null
+) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  doc.setProperties({ title: guiaFileName(folha).replace(/\.pdf$/, "") });
+  doc.setProperties({ title: guiasFileName(folhas).replace(/\.pdf$/, "") });
+  folhas.forEach((folha, i) => {
+    if (i > 0) doc.addPage();
+    drawGuia(doc, folha, caixa, logoDataUrl);
+  });
+  return doc;
+}
+
+function drawGuia(
+  doc: jsPDF,
+  folha: GuiaFolha,
+  caixa: GuiaCaixa,
+  logoDataUrl?: string | null
+) {
   const M = 36;
   const R = 559;
   const MID = (M + R) / 2;
@@ -269,35 +291,48 @@ export function buildGuiaPDF(
   text("Total:", R - boxW + 10, y + 27, { bold: true, size: 10 });
   text(brl(total), R - 10, y + 27, { align: "right", bold: true, size: 10 });
 
-  return doc;
 }
 
 export const guiaFileName = (folha: GuiaFolha) =>
   `GRPPS - ${(folha.centro_custo || "guia").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").trim()}.pdf`;
 
-export async function downloadGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null) {
+/** Nome do arquivo: o da própria guia quando é só uma; senão, a quantidade de guias. */
+export const guiasFileName = (folhas: GuiaFolha[]) =>
+  folhas.length === 1 ? guiaFileName(folhas[0]) : `GRPPS - ${folhas.length} guias.pdf`;
+
+const logoDaCaixa = (caixa?: GuiaCaixa, logoUrl?: string | null) => {
   const isIPPN = /\bippn\b|ponto novo/i.test(`${caixa?.nome ?? ""} ${caixa?.razao_social ?? ""}`);
-  const logo = await urlToDataUrl(isIPPN ? ippnLogo : logoUrl);
+  return urlToDataUrl(isIPPN ? ippnLogo : logoUrl);
+};
+
+export async function downloadGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null) {
+  const logo = await logoDaCaixa(caixa, logoUrl);
   buildGuiaPDF(folha, caixa, logo).save(guiaFileName(folha));
 }
 
-export async function previewGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null, existingWindow?: Window | null) {
+export function previewGuia(folha: GuiaFolha, caixa?: GuiaCaixa, logoUrl?: string | null, existingWindow?: Window | null) {
+  return previewGuias([folha], caixa, logoUrl, existingWindow);
+}
+
+/** Abre várias guias em uma única aba (uma por página), com download manual. */
+export async function previewGuias(folhas: GuiaFolha[], caixa?: GuiaCaixa, logoUrl?: string | null, existingWindow?: Window | null) {
+  if (!folhas.length) return;
   const popup = existingWindow ?? window.open("", "_blank");
   if (!popup) return;
   popup.opener = null;
-  const isIPPN = /\bippn\b|ponto novo/i.test(`${caixa?.nome ?? ""} ${caixa?.razao_social ?? ""}`);
-  const logo = await urlToDataUrl(isIPPN ? ippnLogo : logoUrl);
-  const url = URL.createObjectURL(buildGuiaPDF(folha, caixa, logo).output("blob"));
+  const logo = await logoDaCaixa(caixa, logoUrl);
+  const fileName = guiasFileName(folhas);
+  const url = URL.createObjectURL(buildGuiasPDF(folhas, caixa, logo).output("blob"));
   const page = popup.document;
-  page.title = guiaFileName(folha);
+  page.title = fileName;
   page.body.replaceChildren();
   const download = page.createElement("a");
   download.href = url;
-  download.download = guiaFileName(folha);
+  download.download = fileName;
   download.textContent = "Baixar PDF";
   const frame = page.createElement("iframe");
   frame.src = url;
-  frame.title = guiaFileName(folha);
+  frame.title = fileName;
   frame.width = "100%";
   frame.style.height = "calc(100vh - 48px)";
   frame.style.border = "0";

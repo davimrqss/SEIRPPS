@@ -20,6 +20,11 @@ import { useCaixaAtiva } from "@/hooks/useCaixa";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { safeErrorMessage } from "@/lib/safeError";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useSelecao } from "@/hooks/useSelecao";
+import {
+  BarraSelecao, BotaoExcluirSelecionados, CheckboxTodos, ConfirmarExclusaoEmMassa,
+} from "@/components/SelecaoEmMassa";
 
 type Orgao = Tables<"orgaos">;
 
@@ -109,6 +114,24 @@ export default function Orgaos() {
       (o.municipio ?? "").toLowerCase().includes(busca.toLowerCase())
   );
 
+  const selecao = useSelecao(filtrados.map((o) => o.id));
+  const [excluirVarios, setExcluirVarios] = useState(false);
+  const [excluindoVarios, setExcluindoVarios] = useState(false);
+
+  const handleDeleteSelecionados = async () => {
+    setExcluindoVarios(true);
+    const { error } = await supabase.from("orgaos").delete().in("id", selecao.selecionados);
+    setExcluindoVarios(false);
+    if (error) {
+      toast.error(safeErrorMessage("Não foi possível excluir os órgãos"));
+      return;
+    }
+    toast.success(`${selecao.selecionados.length} órgão(s) excluído(s).`);
+    selecao.limpar();
+    setExcluirVarios(false);
+    invalidate();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -124,18 +147,28 @@ export default function Orgaos() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome, CNPJ ou município..." className="pl-9"
               value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
+          {canEditCaixasEOrgaos && (
+            <BarraSelecao quantidade={selecao.selecionados.length} onLimpar={selecao.limpar}>
+              <BotaoExcluirSelecionados onClick={() => setExcluirVarios(true)} />
+            </BarraSelecao>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  {canEditCaixasEOrgaos && (
+                    <th className="w-10 py-3 pl-4">
+                      <CheckboxTodos todos={selecao.todos} parcial={selecao.parcial} onChange={selecao.alternarTodos} />
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Nome</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">CNPJ</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Endereço</th>
@@ -148,14 +181,20 @@ export default function Orgaos() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
+                  <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
                 ) : filtrados.length === 0 ? (
-                  <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">
+                  <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">
                     <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />Nenhum órgão cadastrado
                   </td></tr>
                 ) : (
                   filtrados.map((o) => (
                     <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      {canEditCaixasEOrgaos && (
+                        <td className="py-3 pl-4">
+                          <Checkbox aria-label={`Selecionar ${o.nome}`} checked={selecao.estaMarcado(o.id)}
+                            onCheckedChange={() => selecao.alternar(o.id)} />
+                        </td>
+                      )}
                       <td className="py-3 px-4 font-medium text-foreground">{o.nome}</td>
                       <td className="py-3 px-4 text-muted-foreground font-mono text-xs">{o.cnpj}</td>
                       <td className="py-3 px-4 text-muted-foreground">{o.endereco}</td>
@@ -251,6 +290,15 @@ export default function Orgaos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConfirmarExclusaoEmMassa
+        open={excluirVarios}
+        onOpenChange={setExcluirVarios}
+        titulo={`Excluir ${selecao.selecionados.length} órgão(s)?`}
+        descricao="Os órgãos selecionados serão removidos. Descrições vinculadas ficarão sem órgão."
+        excluindo={excluindoVarios}
+        onConfirm={handleDeleteSelecionados}
+      />
     </div>
   );
 }
