@@ -6,7 +6,22 @@ const dataLocal = (date: Date) => Number.isNaN(date.getTime()) ? ""
   : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-export type AbaPlanilha = { nome: string; texto: string; valoresPorLinha: Map<number, number[]> };
+export type AbaPlanilha = { nome: string; texto: string; linhas: Map<number, string[]> };
+
+/** Column numbers (1 = first cell after the "L<row>" marker) chosen by the AI; 0 means absent. */
+export type MapaColunas = {
+  linha_cabecalho: number; descricao: number; remuneracao: number; base_calculo: number;
+  salario_familia: number; salario_maternidade: number; aux_doenca: number;
+  valor_servidor: number; valor_patronal: number; pago_servidor: number; data_pagamento_servidor: number;
+  pago_patronal: number; data_pagamento_patronal: number;
+};
+
+export type GuiaPlanilha = {
+  linha: number; codigo: string; descricao: string; remuneracao: number; base_calculo: number;
+  salario_familia: number; salario_maternidade: number; aux_doenca: number;
+  valor_servidor: number; valor_patronal: number; pago_servidor: number; data_pagamento_servidor: string;
+  pago_patronal: number; data_pagamento_patronal: string;
+};
 
 export function isAbaMensal(nome: string) {
   const n = normalizar(nome);
@@ -15,7 +30,7 @@ export function isAbaMensal(nome: string) {
 
 /** Convert raw sheet rows into compact tab-separated text keeping the real Excel row numbers. */
 export function linhasParaTexto(linhas: unknown[][], primeiraLinha = 1): Omit<AbaPlanilha, "nome"> {
-  const valoresPorLinha = new Map<number, number[]>();
+  const mapa = new Map<number, string[]>();
   const saida: string[] = [];
   linhas.forEach((linha, index) => {
     const numero = primeiraLinha + index;
@@ -26,17 +41,42 @@ export function linhasParaTexto(linhas: unknown[][], primeiraLinha = 1): Omit<Ab
     });
     while (celulas.length && celulas[celulas.length - 1] === "") celulas.pop();
     if (!celulas.some((cell) => cell !== "" && cell !== "0")) return;
-    valoresPorLinha.set(numero, (linha ?? []).filter((cell): cell is number => typeof cell === "number" && Number.isFinite(cell)).map(round2));
+    mapa.set(numero, celulas);
     saida.push(`L${numero}\t${celulas.join("\t")}`);
   });
-  return { texto: saida.join("\n"), valoresPorLinha };
+  return { texto: saida.join("\n"), linhas: mapa };
 }
 
-/** True when every non-zero value returned by the AI exists in the original Excel row. */
-export function valoresConferem(valoresDaLinha: number[] | undefined, valores: number[]) {
-  if (!valoresDaLinha) return false;
-  return valores.filter((value) => Math.abs(value) > 0.001)
-    .every((value) => valoresDaLinha.some((cell) => Math.abs(cell - round2(value)) < 0.011));
+const numero = (value: string | undefined) => {
+  const n = Number(value);
+  return value && Number.isFinite(n) ? Math.abs(n) : 0;
+};
+const data = (value: string | undefined) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+
+/** Read every guide row exactly from the original cells, using the AI column map. */
+export function extrairGuias(aba: Pick<AbaPlanilha, "linhas">, mapa: MapaColunas): GuiaPlanilha[] {
+  const cel = (celulas: string[], coluna: number) => coluna > 0 ? celulas[coluna - 1] : undefined;
+  const guias: GuiaPlanilha[] = [];
+  for (const [linha, celulas] of [...aba.linhas.entries()].sort((a, b) => a[0] - b[0])) {
+    if (linha <= mapa.linha_cabecalho) continue;
+    const rotulo = (cel(celulas, mapa.descricao) ?? "").trim();
+    if (!rotulo) continue;
+    if (/^(sub)?total\b/i.test(normalizar(rotulo))) break;
+    const guia: GuiaPlanilha = {
+      linha, codigo: "", descricao: rotulo,
+      remuneracao: numero(cel(celulas, mapa.remuneracao)), base_calculo: numero(cel(celulas, mapa.base_calculo)),
+      salario_familia: numero(cel(celulas, mapa.salario_familia)), salario_maternidade: numero(cel(celulas, mapa.salario_maternidade)),
+      aux_doenca: numero(cel(celulas, mapa.aux_doenca)),
+      valor_servidor: numero(cel(celulas, mapa.valor_servidor)), valor_patronal: numero(cel(celulas, mapa.valor_patronal)),
+      pago_servidor: numero(cel(celulas, mapa.pago_servidor)), data_pagamento_servidor: data(cel(celulas, mapa.data_pagamento_servidor)),
+      pago_patronal: numero(cel(celulas, mapa.pago_patronal)), data_pagamento_patronal: data(cel(celulas, mapa.data_pagamento_patronal)),
+    };
+    if (guia.base_calculo <= 0 && guia.valor_servidor <= 0 && guia.valor_patronal <= 0) continue;
+    const match = rotulo.match(/^(\d{3,})\s*[-–]?\s*(.+)$/);
+    if (match) { guia.codigo = match[1]; guia.descricao = match[2].trim(); }
+    guias.push(guia);
+  }
+  return guias;
 }
 
 export async function lerPlanilha(file: File): Promise<AbaPlanilha[]> {
@@ -47,17 +87,4 @@ export async function lerPlanilha(file: File): Promise<AbaPlanilha[]> {
     const linhas = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, blankrows: true, defval: null });
     return { nome, ...linhasParaTexto(linhas, range.s.r + 1) };
   });
-}
-
-/** Split a sheet into small batches, repeating the header lines so each AI call stays fast. */
-export function dividirEmLotes(texto: string, tamanho = 12) {
-  const linhas = texto.split("\n").filter(Boolean);
-  const numericas = (linha: string) => linha.split("\t").slice(1).filter((cell) => /^-?\d+(\.\d+)?$/.test(cell) && cell !== "0").length;
-  const inicio = linhas.findIndex((linha) => numericas(linha) >= 3);
-  if (inicio < 0) return [texto];
-  const cabecalho = linhas.slice(0, inicio);
-  const dados = linhas.slice(inicio);
-  const lotes: string[] = [];
-  for (let i = 0; i < dados.length; i += tamanho) lotes.push([...cabecalho, ...dados.slice(i, i + tamanho)].join("\n"));
-  return lotes;
 }
