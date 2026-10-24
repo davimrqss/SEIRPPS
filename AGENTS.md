@@ -7,4 +7,5 @@
 - Store reusable guide descriptions independently from paying agencies; the guide itself owns the selected agency.
 - Guard privileged pages in the router as well as in Supabase RLS so hidden menu items cannot be opened directly.
 - Validate guide dates through `guiaDatesSchema` in creation, editing and import so all entry points share the same validation.
-- Open guide PDFs through `previewGuia`, including after creation, so the viewer and named download use the same document.
+- Open guide PDFs only on explicit user action through `previewGuia`, so the viewer and named download use the same document.
+- Import guides from Excel by parsing sheets in the browser and sending only the chosen tab as text to the `analyze-guias-planilha` Gemini function; AI values are cross-checked against the original row before review.

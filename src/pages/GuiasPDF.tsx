@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, FileText, Grid2X2, List, Plus } from "lucide-react";
+import { CreditCard, FileSpreadsheet, FileText, Grid2X2, List, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,7 +66,7 @@ export default function GuiasPDF() {
   return <div className="space-y-6">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div><h1 className="text-2xl font-bold text-foreground">Guias de Recolhimento</h1></div>
-      {canEditFolhas && <Button onClick={() => navigate("/guias/cadastrar")}><Plus className="mr-2 h-4 w-4" />Cadastrar Guia</Button>}
+      {canEditFolhas && <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => navigate("/guias/importar")}><FileSpreadsheet className="mr-2 h-4 w-4" />Importar planilha</Button><Button onClick={() => navigate("/guias/cadastrar")}><Plus className="mr-2 h-4 w-4" />Cadastrar Guia</Button></div>}
     </div>
     <Card><CardHeader><CardTitle className="text-base">Filtros</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-4">
       <Select value={mes} onValueChange={setMes}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todos os meses</SelectItem>{meses.map((item) => <SelectItem key={item} value={item}>{mesBR(item)}</SelectItem>)}</SelectContent></Select>
