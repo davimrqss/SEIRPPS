@@ -8,4 +8,4 @@
 - Guard privileged pages in the router as well as in Supabase RLS so hidden menu items cannot be opened directly.
 - Validate guide dates through `guiaDatesSchema` in creation, editing and import so all entry points share the same validation.
 - Open guide PDFs only on explicit user action through `previewGuia`, so the viewer and named download use the same document.
-- Import guides from Excel by parsing sheets in the browser and sending only the chosen tab as text to the `analyze-guias-planilha` Gemini function; AI values are cross-checked against the original row before review.
+- Import guides from Excel by parsing sheets in the browser and copying values from the original cells; known headers are mapped locally, and only unknown layouts send a sample to the `analyze-guias-planilha` Gemini function for column mapping, because Gemini is too slow to transcribe whole sheets within the function time limit.

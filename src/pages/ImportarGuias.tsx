@@ -21,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fmtBRL, parseCurrency } from "@/lib/format";
 import { guiaDatesSchema } from "@/lib/guiaDates";
 import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia, type Guia } from "@/lib/guiaCalculations";
-import { extrairGuias, isAbaMensal, lerPlanilha, type AbaPlanilha, type GuiaPlanilha, type MapaColunas } from "@/lib/planilhaGuias";
+import { detectarColunas, extrairGuias, isAbaMensal, lerPlanilha, type AbaPlanilha, type GuiaPlanilha, type MapaColunas } from "@/lib/planilhaGuias";
 import { safeErrorMessage } from "@/lib/safeError";
 
 type AiRow = GuiaPlanilha;
@@ -51,6 +51,7 @@ export default function ImportarGuias() {
   const [abas, setAbas] = useState<AbaPlanilha[]>([]);
   const [abaNome, setAbaNome] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [usouGemini, setUsouGemini] = useState(false);
   const [error, setError] = useState("");
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [emissao, setEmissao] = useState("");
@@ -103,19 +104,24 @@ export default function ImportarGuias() {
   const analyze = async () => {
     const aba = abas.find((item) => item.nome === abaNome);
     if (!aba || !canEditFolhas) return;
-        setError(""); setRows([]); setAnalyzing(true);
+        setError(""); setRows([]); setAnalyzing(true); setUsouGemini(false);
     try {
-      const amostra = aba.texto.split("\n").slice(0, LINHAS_AMOSTRA).join("\n");
-      const { data, error: fnError } = await supabase.functions.invoke("analyze-guias-planilha", { body: { sheetName: aba.nome, text: amostra } });
-      if (fnError) {
-        let message = "Não foi possível analisar a planilha. Tente novamente.";
-        try {
-          const body = await (fnError as { context?: Response }).context?.json();
-          if (typeof body?.error === "string") message = body.error;
-        } catch { /* mantém a mensagem padrão */ }
-        throw new Error(message);
+      let mapa = detectarColunas(aba);
+      if (!mapa) {
+        setUsouGemini(true);
+        const amostra = aba.texto.split("\n").slice(0, LINHAS_AMOSTRA).join("\n");
+        const { data, error: fnError } = await supabase.functions.invoke("analyze-guias-planilha", { body: { sheetName: aba.nome, text: amostra } });
+        if (fnError) {
+          let message = "Não foi possível analisar a planilha. Tente novamente.";
+          try {
+            const body = await (fnError as { context?: Response }).context?.json();
+            if (typeof body?.error === "string") message = body.error;
+          } catch { /* mantém a mensagem padrão */ }
+          throw new Error(message);
+        }
+        mapa = data as MapaColunas;
       }
-      const aiRows = extrairGuias(aba, data as MapaColunas);
+      const aiRows = extrairGuias(aba, mapa);
       if (!aiRows.length) throw new Error("Nenhuma descrição com valores foi encontrada nesta aba.");
       setRows(aiRows.map((row, index) => {
         const centro = centros.find((item) => row.codigo && item.codigo?.trim() === row.codigo.trim())
@@ -211,7 +217,7 @@ export default function ImportarGuias() {
             <div className="rounded-full bg-primary/10 p-4"><FileSpreadsheet className="h-9 w-9 text-primary" /></div>
             <div>
               <h2 className="text-lg font-semibold">Selecione a planilha</h2>
-              <p className="mt-1 max-w-lg text-sm text-muted-foreground">A planilha não é armazenada. O Google Gemini identifica as colunas da aba escolhida e os valores são copiados exatamente da planilha, uma guia por descrição.</p>
+              <p className="mt-1 max-w-lg text-sm text-muted-foreground">A planilha não é armazenada. Os valores são copiados exatamente da aba escolhida, uma guia por descrição. Quando o modelo da planilha é diferente, o Google Gemini identifica as colunas.</p>
             </div>
             <Input ref={inputRef} className="hidden" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
               onChange={(event) => { void chooseFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
@@ -228,9 +234,9 @@ export default function ImportarGuias() {
                 </Select>
               </div>
             )}
-            {analyzing && <p className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />O Google Gemini está identificando as colunas da aba {abaNome}. Isso pode levar até 2 minutos.</p>}
+            {analyzing && <p className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />{usouGemini ? `O Google Gemini está identificando as colunas da aba ${abaNome}. Isso pode levar até 2 minutos.` : `Lendo a aba ${abaNome}...`}</p>}
             {error && <Alert variant="destructive" className="max-w-xl text-left"><AlertCircle className="h-4 w-4" /><AlertTitle>Não foi possível analisar</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-            <Button disabled={!abaNome || analyzing} onClick={analyze}><Sparkles className="mr-2 h-4 w-4" />Analisar com IA</Button>
+            <Button disabled={!abaNome || analyzing} onClick={analyze}><Sparkles className="mr-2 h-4 w-4" />Analisar planilha</Button>
           </CardContent>
         </Card>
       )}
