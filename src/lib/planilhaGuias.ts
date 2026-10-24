@@ -88,3 +88,23 @@ export async function lerPlanilha(file: File): Promise<AbaPlanilha[]> {
     return { nome, ...linhasParaTexto(linhas, range.s.r + 1) };
   });
 }
+
+const REGRAS: [Exclude<keyof MapaColunas, "linha_cabecalho">, RegExp][] = [
+  ["descricao", /^(centro de custo|descricao)/], ["remuneracao", /^remuneracao/], ["base_calculo", /^base/],
+  ["salario_familia", /^(\(-\) )?salario[- ]familia/], ["salario_maternidade", /^(\(-\) )?salario[- ]maternidade/],
+  ["aux_doenca", /^(\(-\) )?aux(ilio)?[- ]doenca/], ["valor_servidor", /^servidor/], ["valor_patronal", /^patronal/],
+  ["pago_servidor", /repassado servidor/], ["data_pagamento_servidor", /^data.*repasse.*servidor/],
+  ["pago_patronal", /repassado patronal/], ["data_pagamento_patronal", /^data.*repasse.*patronal/],
+];
+
+/** Recognise the usual RPPS summary layout by its header names; null when the layout is unknown. */
+export function detectarColunas(aba: Pick<AbaPlanilha, "linhas">): MapaColunas | null {
+  for (const [linha, celulas] of [...aba.linhas.entries()].sort((a, b) => a[0] - b[0])) {
+    const titulos = celulas.map(normalizar);
+    if (!titulos.some((titulo) => REGRAS[0][1].test(titulo))) continue;
+    const mapa = { linha_cabecalho: linha } as MapaColunas;
+    for (const [campo, regra] of REGRAS) mapa[campo] = titulos.findIndex((titulo) => regra.test(titulo)) + 1;
+    return mapa.descricao && mapa.base_calculo && mapa.valor_servidor && mapa.valor_patronal ? mapa : null;
+  }
+  return null;
+}

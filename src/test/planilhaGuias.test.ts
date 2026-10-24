@@ -34,3 +34,14 @@ describe("planilha de guias", () => {
     expect(extrairGuias(aba, mapa).some((guia) => guia.descricao.includes("DEPOIS DO TOTAL"))).toBe(false);
   });
 });
+
+describe("reconhecimento das colunas", () => {
+  it("reconhece o cabeçalho do resumo de base de cálculo", async () => {
+    const { detectarColunas } = await import("@/lib/planilhaGuias");
+    const cabecalho = linhasParaTexto([[null, "Centro de Custo", "Remuneração", "Base Cálculo", "(-) Salário Família", "(-) Salário-Maternidade", "(-) Auxílio-Doença", "Qtd Servidores", "Qtdade Salario Maternidade", "Servidor (11%)", "Patronal (13,51%)", "Valor Repassado Servidor", "Data do Repasse Servidor", "Valor Repassado Patronal", "Data do Repasse  Patronal", "Diferença Servidor"]], 3);
+    expect(detectarColunas(cabecalho)).toEqual({
+      linha_cabecalho: 3, descricao: 2, remuneracao: 3, base_calculo: 4, salario_familia: 5, salario_maternidade: 6, aux_doenca: 7,
+      valor_servidor: 10, valor_patronal: 11, pago_servidor: 12, data_pagamento_servidor: 13, pago_patronal: 14, data_pagamento_patronal: 15,
+    });
+  });
+});
