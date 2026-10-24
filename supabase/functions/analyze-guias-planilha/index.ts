@@ -4,61 +4,30 @@ import { z } from "npm:zod";
 
 const BodySchema = z.object({
   sheetName: z.string().trim().min(1).max(100),
-  text: z.string().min(1).max(80_000),
+  text: z.string().min(1).max(40_000),
 });
 
-const RowSchema = z.object({
-  linha: z.number().int().nonnegative(),
-  codigo: z.string().max(40),
-  descricao: z.string().max(200),
-  remuneracao: z.number().finite(),
-  base_calculo: z.number().finite(),
-  salario_familia: z.number().finite(),
-  salario_maternidade: z.number().finite(),
-  aux_doenca: z.number().finite(),
-  valor_servidor: z.number().finite(),
-  valor_patronal: z.number().finite(),
-  pago_servidor: z.number().finite(),
-  data_pagamento_servidor: z.string().max(10),
-  pago_patronal: z.number().finite(),
-  data_pagamento_patronal: z.string().max(10),
-  observacoes: z.string().max(500),
-});
-const ResultSchema = z.object({ rows: z.array(RowSchema).max(300) });
+const COLUMNS = ["linha_cabecalho", "descricao", "remuneracao", "base_calculo", "salario_familia", "salario_maternidade", "aux_doenca", "valor_servidor", "valor_patronal", "pago_servidor", "data_pagamento_servidor", "pago_patronal", "data_pagamento_patronal"] as const;
+const ResultSchema = z.object(Object.fromEntries(COLUMNS.map((key) => [key, z.number().int().min(0).max(5000)])) as Record<typeof COLUMNS[number], z.ZodNumber>);
 
 const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-const SYSTEM_PROMPT = `Você lê planilhas brasileiras de resumo de base de cálculo previdenciária (RPPS). A planilha chega como linhas separadas por TAB; cada linha começa com "L<número>" indicando o número real da linha no Excel. Identifique as linhas de cabeçalho e use-as para mapear as colunas.
-Retorne exatamente uma linha de saída para cada linha de centro de custo/descrição que tenha remuneração, base de cálculo ou contribuição maior que zero. Ignore linhas vazias, linhas de TOTAL, subtotais e resumos de repasse abaixo da tabela (ex.: "Repasses ADM", "FUNDEB", "Agentes").
-Campos:
-- linha: número da linha Excel (o número após "L").
-- codigo: código numérico no início do rótulo (ex.: "102001" em "102001-GUARDA MUNICIPAL"); vazio se não houver.
-- descricao: o rótulo sem o código e sem hífen inicial, sem espaços extras (ex.: "GUARDA MUNICIPAL").
-- remuneracao: coluna Remuneração. base_calculo: coluna Base Cálculo.
-- salario_familia, salario_maternidade, aux_doenca: colunas de dedução correspondentes, como valores positivos.
-- valor_servidor: valor a ser repassado do servidor/segurado. valor_patronal: valor a ser repassado patronal.
-- pago_servidor e pago_patronal: valores já repassados (seção "Valores Repassados"); 0 se vazio.
-- data_pagamento_servidor e data_pagamento_patronal: data do repasse no formato AAAA-MM-DD; vazio se não houver.
-- observacoes: apenas ambiguidades relevantes; vazio se não houver.
-Copie os números exatamente como aparecem (já estão em formato decimal com ponto). Use 0 para valores ausentes. Nunca invente linhas, códigos, valores ou datas.`;
+const SYSTEM_PROMPT = `Você analisa a estrutura de planilhas brasileiras de resumo de base de cálculo previdenciária (RPPS). A planilha chega como linhas separadas por TAB; cada linha começa com "L<número>", o número real da linha no Excel. As colunas são numeradas a partir de 1 logo após esse marcador (a primeira célula depois de "L<número>" é a coluna 1, mesmo quando vazia).
+Não extraia valores. Devolva somente o número de cada coluna:
+- linha_cabecalho: número da linha Excel do cabeçalho principal (a linha com "Centro de Custo", "Remuneração" etc.).
+- descricao: coluna com o rótulo do centro de custo/descrição (ex.: "102001-GUARDA MUNICIPAL").
+- remuneracao, base_calculo: colunas Remuneração e Base de Cálculo.
+- salario_familia, salario_maternidade, aux_doenca: colunas das deduções correspondentes (valores, não quantidades).
+- valor_servidor e valor_patronal: valores A SEREM repassados do servidor/segurado e patronal (não as colunas de diferença, corrigido ou total).
+- pago_servidor e pago_patronal: valores JÁ repassados (seção "Valores Repassados").
+- data_pagamento_servidor e data_pagamento_patronal: colunas da data do repasse de cada parte.
+Use 0 para qualquer coluna inexistente. Nunca invente colunas.`;
 
-const rowJsonSchema = {
+const resultJsonSchema = {
   type: "object",
-  properties: {
-    linha: { type: "integer" }, codigo: { type: "string" }, descricao: { type: "string" },
-    remuneracao: { type: "number" }, base_calculo: { type: "number" },
-    salario_familia: { type: "number" }, salario_maternidade: { type: "number" }, aux_doenca: { type: "number" },
-    valor_servidor: { type: "number" }, valor_patronal: { type: "number" },
-    pago_servidor: { type: "number" }, data_pagamento_servidor: { type: "string" },
-    pago_patronal: { type: "number" }, data_pagamento_patronal: { type: "string" },
-    observacoes: { type: "string" },
-  },
-  required: [
-    "linha", "codigo", "descricao", "remuneracao", "base_calculo", "salario_familia",
-    "salario_maternidade", "aux_doenca", "valor_servidor", "valor_patronal", "pago_servidor",
-    "data_pagamento_servidor", "pago_patronal", "data_pagamento_patronal", "observacoes",
-  ],
+  properties: Object.fromEntries(COLUMNS.map((key) => [key, { type: "integer" }])),
+  required: [...COLUMNS],
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -70,7 +39,7 @@ async function callGemini(apiKey: string, sheetName: string, text: string, signa
     contents: [{ role: "user", parts: [{ text: `Aba: ${sheetName}\n\n${text}` }] }],
     generationConfig: {
       responseMimeType: "application/json",
-      responseJsonSchema: { type: "object", properties: { rows: { type: "array", items: rowJsonSchema } }, required: ["rows"] },
+      responseJsonSchema: resultJsonSchema,
       thinkingConfig: { thinkingLevel: "low" },
     },
   };
@@ -107,7 +76,7 @@ async function callGemini(apiKey: string, sheetName: string, text: string, signa
     let decoded: unknown;
     try { decoded = JSON.parse(output); } catch { throw fail("O Gemini retornou uma resposta que não pôde ser lida.", 422); }
     const validated = ResultSchema.safeParse(decoded);
-    if (!validated.success) throw fail("O Gemini não conseguiu organizar os valores desta aba.", 422);
+    if (!validated.success) throw fail("O Gemini não conseguiu identificar as colunas desta aba.", 422);
     return validated.data;
   }
   throw fail("O Google Gemini está temporariamente indisponível. Tente novamente em instantes.", 503);
