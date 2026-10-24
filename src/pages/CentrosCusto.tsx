@@ -22,6 +22,11 @@ import { useCentrosCusto, useOrgaos } from "@/hooks/useCadastros";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { safeErrorMessage } from "@/lib/safeError";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useSelecao } from "@/hooks/useSelecao";
+import {
+  BarraSelecao, BotaoExcluirSelecionados, CheckboxTodos, ConfirmarExclusaoEmMassa,
+} from "@/components/SelecaoEmMassa";
 
 type CentroCusto = Tables<"centros_custo"> & { orgaos?: { nome: string } | null };
 
@@ -100,6 +105,24 @@ export default function CentrosCusto() {
       c.codigo.toLowerCase().includes(busca.toLowerCase())
   );
 
+  const selecao = useSelecao(filtrados.map((c) => c.id));
+  const [excluirVarios, setExcluirVarios] = useState(false);
+  const [excluindoVarios, setExcluindoVarios] = useState(false);
+
+  const handleDeleteSelecionados = async () => {
+    setExcluindoVarios(true);
+    const { error } = await supabase.from("centros_custo").delete().in("id", selecao.selecionados);
+    setExcluindoVarios(false);
+    if (error) {
+      toast.error(safeErrorMessage("Não foi possível excluir as descrições"));
+      return;
+    }
+    toast.success(`${selecao.selecionados.length} descrição(ões) excluída(s).`);
+    selecao.limpar();
+    setExcluirVarios(false);
+    invalidate();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -112,18 +135,28 @@ export default function CentrosCusto() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome ou código..." className="pl-9"
               value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
+          {canEditCentrosCusto && (
+            <BarraSelecao quantidade={selecao.selecionados.length} onLimpar={selecao.limpar}>
+              <BotaoExcluirSelecionados onClick={() => setExcluirVarios(true)} />
+            </BarraSelecao>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  {canEditCentrosCusto && (
+                    <th className="w-10 py-3 pl-4">
+                      <CheckboxTodos todos={selecao.todos} parcial={selecao.parcial} onChange={selecao.alternarTodos} />
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Código</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Nome</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Órgão</th>
@@ -135,14 +168,20 @@ export default function CentrosCusto() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">Carregando...</td></tr>
                 ) : filtrados.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">
+                  <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">
                     <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />Nenhuma descrição cadastrada
                   </td></tr>
                 ) : (
                   filtrados.map((c) => (
                     <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      {canEditCentrosCusto && (
+                        <td className="py-3 pl-4">
+                          <Checkbox aria-label={`Selecionar ${c.nome}`} checked={selecao.estaMarcado(c.id)}
+                            onCheckedChange={() => selecao.alternar(c.id)} />
+                        </td>
+                      )}
                       <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{c.codigo}</td>
                       <td className="py-3 px-4 font-medium text-foreground">{c.nome}</td>
                       <td className="py-3 px-4 text-muted-foreground">{c.orgaos?.nome ?? "—"}</td>
