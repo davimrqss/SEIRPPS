@@ -2,6 +2,8 @@ import * as XLSX from "xlsx";
 
 const MESES = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const normalizar = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const dataLocal = (date: Date) => Number.isNaN(date.getTime()) ? ""
+  : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
 export type AbaPlanilha = { nome: string; texto: string; valoresPorLinha: Map<number, number[]> };
@@ -18,7 +20,7 @@ export function linhasParaTexto(linhas: unknown[][], primeiraLinha = 1): Omit<Ab
   linhas.forEach((linha, index) => {
     const numero = primeiraLinha + index;
     const celulas = (linha ?? []).map((cell) => {
-      if (cell instanceof Date) return Number.isNaN(cell.getTime()) ? "" : cell.toISOString().slice(0, 10);
+      if (cell instanceof Date) return dataLocal(cell);
       if (typeof cell === "number") return Number.isFinite(cell) ? String(round2(cell)) : "";
       return cell == null ? "" : String(cell).replace(/\s+/g, " ").trim().slice(0, 120);
     });
