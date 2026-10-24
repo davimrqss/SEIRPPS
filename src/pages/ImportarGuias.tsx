@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateField } from "@/components/DateField";
 import { CurrencyInput } from "@/components/CurrencyInput";
@@ -21,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fmtBRL, parseCurrency } from "@/lib/format";
 import { guiaDatesSchema } from "@/lib/guiaDates";
 import { calcularContribuicao, calcularValoresGuia, camposAcrescimosGuia, type Guia } from "@/lib/guiaCalculations";
-import { isAbaMensal, lerPlanilha, valoresConferem, type AbaPlanilha } from "@/lib/planilhaGuias";
+import { dividirEmLotes, isAbaMensal, lerPlanilha, valoresConferem, type AbaPlanilha } from "@/lib/planilhaGuias";
 import { safeErrorMessage } from "@/lib/safeError";
 
 type AiRow = {
@@ -35,6 +36,8 @@ type MoneyKey = "remuneracao" | "base_calculo" | "valor_servidor" | "valor_patro
 
 const moneyText = (value: number) => (value ? value.toFixed(2).replace(".", ",") : "");
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\W/g, "");
+const LOTE_LINHAS = 5;
+const LOTES_SIMULTANEOS = 5;
 const isDate = (value: string) => z.string().date().safeParse(value).success;
 const MONEY_FIELDS: [string, MoneyKey][] = [
   ["Remuneração", "remuneracao"], ["Base de cálculo", "base_calculo"], ["Contribuição servidor", "valor_servidor"],
@@ -55,6 +58,7 @@ export default function ImportarGuias() {
   const [abas, setAbas] = useState<AbaPlanilha[]>([]);
   const [abaNome, setAbaNome] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [progresso, setProgresso] = useState({ feitos: 0, total: 0 });
   const [error, setError] = useState("");
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [emissao, setEmissao] = useState("");
@@ -110,15 +114,30 @@ export default function ImportarGuias() {
     if (aba.texto.length > 80_000) return void setError("Esta aba é grande demais para análise. Remova colunas ou linhas que não são usadas.");
     setError(""); setRows([]); setAnalyzing(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("analyze-guias-planilha", { body: { sheetName: aba.nome, text: aba.texto } });
-      if (fnError) {
-        let message = "Não foi possível analisar a planilha. Tente novamente.";
-        try {
-          const body = await (fnError as { context?: Response }).context?.json();
-          if (typeof body?.error === "string") message = body.error;
-        } catch { /* mantém a mensagem padrão */ }
-        throw new Error(message);
+      const lotes = dividirEmLotes(aba.texto, LOTE_LINHAS);
+      let concluidos = 0;
+      setProgresso({ feitos: 0, total: lotes.length });
+      const analisarLote = async (text: string) => {
+        const { data, error: fnError } = await supabase.functions.invoke("analyze-guias-planilha", { body: { sheetName: aba.nome, text } });
+        if (fnError) {
+          let message = "Não foi possível analisar a planilha. Tente novamente.";
+          try {
+            const body = await (fnError as { context?: Response }).context?.json();
+            if (typeof body?.error === "string") message = body.error;
+          } catch { /* mantém a mensagem padrão */ }
+          throw new Error(message);
+        }
+        concluidos += 1;
+        setProgresso({ feitos: concluidos, total: lotes.length });
+        return (data as { rows?: AiRow[] })?.rows ?? [];
+      };
+      const resultados: AiRow[][] = [];
+      for (let i = 0; i < lotes.length; i += LOTES_SIMULTANEOS) {
+        resultados.push(...await Promise.all(lotes.slice(i, i + LOTES_SIMULTANEOS).map(analisarLote)));
       }
+      const porLinha = new Map<number, AiRow>();
+      resultados.flat().forEach((row) => { if (!porLinha.has(row.linha)) porLinha.set(row.linha, row); });
+      const data = { rows: [...porLinha.values()].sort((a, b) => a.linha - b.linha) };
       const aiRows = ((data as { rows?: AiRow[] })?.rows ?? []).filter((row) => row.base_calculo > 0 || row.valor_servidor > 0 || row.valor_patronal > 0);
       if (!aiRows.length) throw new Error("Nenhuma descrição com valores foi encontrada nesta aba.");
       setRows(aiRows.map((row, index) => {
@@ -235,7 +254,12 @@ export default function ImportarGuias() {
                 </Select>
               </div>
             )}
-            {analyzing && <p className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analisando a aba {abaNome} com o Google Gemini...</p>}
+            {analyzing && (
+              <div className="w-full max-w-md space-y-2">
+                <Progress value={progresso.total ? Math.max(5, (progresso.feitos / progresso.total) * 100) : 5} className="h-2" />
+                <p className="flex items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Lendo a aba {abaNome} com o Google Gemini · parte {progresso.feitos} de {progresso.total}. Isso pode levar alguns minutos.</p>
+              </div>
+            )}
             {error && <Alert variant="destructive" className="max-w-xl text-left"><AlertCircle className="h-4 w-4" /><AlertTitle>Não foi possível analisar</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
             <Button disabled={!abaNome || analyzing} onClick={analyze}><Sparkles className="mr-2 h-4 w-4" />Analisar com IA</Button>
           </CardContent>
