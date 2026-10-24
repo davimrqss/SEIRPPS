@@ -8,7 +8,7 @@ describe("planilha de guias", () => {
       [null, null, null],
       [null, "102001-GUARDA MUNICIPAL", 119238.59, 85629.76],
     ], 2);
-    expect(texto.split("\n")).toEqual(["L2\tCentro de Custo\tRemuneração", "L4\t102001-GUARDA MUNICIPAL\t119238.59\t85629.76"]);
+    expect(texto.split("\n")).toEqual(["L2\t\tCentro de Custo\tRemuneração", "L4\t\t102001-GUARDA MUNICIPAL\t119238.59\t85629.76"]);
     expect(valoresPorLinha.get(4)).toEqual([119238.59, 85629.76]);
   });
 
