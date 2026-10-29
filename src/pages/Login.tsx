@@ -47,7 +47,7 @@ export default function Login() {
           <div className="mx-auto w-20 h-20">
             <img src={logo} alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <CardTitle className="text-2xl">SEI-RPPS</CardTitle>
+          <CardTitle className="text-2xl">SEIRPPS</CardTitle>
           <p className="text-sm text-muted-foreground">
             Sistema de Caixa de Previdência
           </p>
