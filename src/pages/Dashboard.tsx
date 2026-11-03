@@ -17,6 +17,8 @@ import { downloadRelatorioMensal, type LinhaRelatorio } from "@/lib/relatorioPdf
 
 const mesBR = (mes: string) => new Date(`${mes}-01T00:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
+const competenciaGuia = (g: { data_emissao?: string | null; mes_referencia: string }) => (g.data_emissao ? g.data_emissao.slice(0, 7) : g.mes_referencia);
+
 const valoresConfig = {
   pago: { label: "Valores pagos", color: "hsl(var(--success))" },
   aberto: { label: "Valores em aberto", color: "hsl(var(--warning))" },
@@ -53,9 +55,9 @@ export default function Dashboard() {
     enabled: guias.length > 0,
   });
 
-  const meses = useMemo(() => [...new Set(guias.map((g) => g.mes_referencia))].sort().reverse(), [guias]);
-  const filtradas = useMemo(() => guias.filter((g) => (mes === "todos" || g.mes_referencia === mes) && (orgao === "todos" || g.orgao_id === orgao)), [guias, mes, orgao]);
-  const resumos = useMemo(() => filtradas.map((guia) => ({ guia, resumo: resumirPagamentos(guia, pagamentos) })), [filtradas, pagamentos]);
+  const meses = useMemo(() => [...new Set(guias.map((g) => competenciaGuia(g)))].sort().reverse(), [guias]);
+  const filtradas = useMemo(() => guias.filter((g) => (mes === "todos" || competenciaGuia(g) === mes) && (orgao === "todos" || g.orgao_id === orgao)), [guias, mes, orgao]);
+  const resumos = useMemo(() => [...filtradas].sort((a, b) => competenciaGuia(b).localeCompare(competenciaGuia(a))).map((guia) => ({ guia, resumo: resumirPagamentos(guia, pagamentos) })), [filtradas, pagamentos]);
   const total = resumos.reduce((acc, { resumo }) => ({
     devidoServidor: acc.devidoServidor + resumo.devidoServidor, pagoServidor: acc.pagoServidor + resumo.pagoServidor,
     saldoServidor: acc.saldoServidor + resumo.saldoServidor, devidoPatronal: acc.devidoPatronal + resumo.devidoPatronal,
@@ -65,8 +67,8 @@ export default function Dashboard() {
   const relatorio = useMemo<LinhaRelatorio[]>(() => {
     const grupos = new Map<string, LinhaRelatorio>();
     resumos.forEach(({ guia, resumo }) => {
-      const key = `${guia.mes_referencia}|${guia.orgao_id ?? guia.orgao}`;
-      const atual = grupos.get(key) ?? { mes: guia.mes_referencia, orgao: guia.orgao, remuneracao: 0, base: 0, devidoServidor: 0, devidoPatronal: 0, pagoServidor: 0, pagoPatronal: 0, saldoServidor: 0, saldoPatronal: 0 };
+      const key = `${competenciaGuia(guia)}|${guia.orgao_id ?? guia.orgao}`;
+      const atual = grupos.get(key) ?? { mes: competenciaGuia(guia), orgao: guia.orgao, remuneracao: 0, base: 0, devidoServidor: 0, devidoPatronal: 0, pagoServidor: 0, pagoPatronal: 0, saldoServidor: 0, saldoPatronal: 0 };
       atual.remuneracao += Number(guia.remuneracao); atual.base += Number(guia.base_calculo);
       atual.devidoServidor += resumo.devidoServidor; atual.devidoPatronal += resumo.devidoPatronal;
       atual.pagoServidor += resumo.pagoServidor; atual.pagoPatronal += resumo.pagoPatronal;
@@ -419,7 +421,7 @@ return (
                     </p>
 
                     <p className="text-sm text-muted-foreground">
-                      {guia.orgao} · {mesBR(guia.mes_referencia)}
+                      {guia.orgao} · {mesBR(competenciaGuia(guia))}
                     </p>
                   </div>
 
