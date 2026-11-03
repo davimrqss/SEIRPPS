@@ -23,6 +23,7 @@ import {
   BarraSelecao, BotaoExcluirSelecionados, CheckboxTodos, ConfirmarExclusaoEmMassa,
 } from "@/components/SelecaoEmMassa";
 
+const competenciaGuia = (g: { data_emissao?: string | null; mes_referencia: string }) => g.data_emissao ? g.data_emissao.slice(0, 7) : g.mes_referencia;
 const mesBR = (mes: string) => new Date(`${mes}-01T00:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 const statusLabel = (status: string) => status === "pago" ? "Pago" : status === "parcial" ? "Parcial" : "Pendente";
 const statusClass = (status: string) => status === "pago" ? "bg-success/10 text-success" : status === "parcial" ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive";
@@ -63,10 +64,10 @@ export default function GuiasPDF() {
     enabled: guias.length > 0,
   });
 
-  const meses = useMemo(() => [...new Set(guias.map((g) => g.mes_referencia))].sort().reverse(), [guias]);
+  const meses = useMemo(() => [...new Set(guias.map((g) => competenciaGuia(g)))].sort().reverse(), [guias]);
   const linhas = useMemo(() => guias.map((guia) => ({ guia, resumo: resumirPagamentos(guia, pagamentos) })).filter(({ guia, resumo }) => {
     const statusGeral = resumo.paga ? "pago" : (resumo.statusServidor === "parcial" || resumo.statusPatronal === "parcial") ? "parcial" : "pendente";
-    return (mes === "todos" || guia.mes_referencia === mes) &&
+    return (mes === "todos" || competenciaGuia(guia) === mes) &&
       (orgao === "todos" || guia.orgao_id === orgao) &&
       (situacao === "todos" || statusGeral === situacao);
   }), [guias, pagamentos, mes, orgao, situacao]);
@@ -128,7 +129,7 @@ export default function GuiasPDF() {
       <div className={modo === "grade" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>{linhas.map(({ guia, resumo }) => {
         const marcada = selecao.estaMarcado(guia.id);
         const actions = <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => previewGuia(guia, caixa ?? undefined, logoUrl)}><FileText className="mr-1 h-4 w-4" />PDF</Button>{canEditFolhas && !resumo.paga && <Button size="sm" onClick={() => navigate(`/guias/${guia.id}/pagamento`)}><CreditCard className="mr-1 h-4 w-4" />Lançar pagamento</Button>}{canEditFolhas && <FolhaActions folha={guia} />}</div>;
-        const titulo = <div className="flex items-start gap-3">{marcar(guia.id, guia.centro_custo)}<div><p className="font-semibold">{guia.centro_custo}</p><p className="text-sm text-muted-foreground">{guia.orgao} · {mesBR(guia.mes_referencia)}</p></div></div>;
+        const titulo = <div className="flex items-start gap-3">{marcar(guia.id, guia.centro_custo)}<div><p className="font-semibold">{guia.centro_custo}</p><p className="text-sm text-muted-foreground">{guia.orgao} · {mesBR(competenciaGuia(guia))}</p></div></div>;
         if (modo === "lista") return <Card key={guia.id} className={marcada ? "border-primary" : undefined}><CardContent className="grid gap-4 p-4 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-center">{titulo}<ResumoParte nome="Servidor" devido={resumo.devidoServidor} pago={resumo.pagoServidor} saldo={resumo.saldoServidor} status={resumo.statusServidor} /><ResumoParte nome="Patronal" devido={resumo.devidoPatronal} pago={resumo.pagoPatronal} saldo={resumo.saldoPatronal} status={resumo.statusPatronal} /><div className="lg:max-w-[300px]">{actions}</div></CardContent></Card>;
         return <Card key={guia.id} className={marcada ? "border-primary" : undefined}><CardContent className="space-y-4 p-5">{titulo}<div className="grid gap-3 sm:grid-cols-2"><ResumoParte nome="Servidor" devido={resumo.devidoServidor} pago={resumo.pagoServidor} saldo={resumo.saldoServidor} status={resumo.statusServidor} /><ResumoParte nome="Patronal" devido={resumo.devidoPatronal} pago={resumo.pagoPatronal} saldo={resumo.saldoPatronal} status={resumo.statusPatronal} /></div>{resumo.pagamentoNaoClassificado > 0 && <p className="text-xs text-warning">Pagamento antigo sem classificação: {fmtBRL(resumo.pagamentoNaoClassificado)}</p>}{actions}</CardContent></Card>;
       })}</div>}
