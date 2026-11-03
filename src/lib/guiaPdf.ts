@@ -167,7 +167,7 @@ function drawGuia(
   const indiceCorrecao = folha.indice_correcao || (folha.aplica_correcao == null ? caixa.indice_correcao : null);
   const correcaoLabel = `CORREÇÃO MONETÁRIA${indiceCorrecao ? ` (${indiceCorrecao})` : ""}`;
   const decimo = folha.is_13 ? "Sim" : "Não";
-  const comp = competencia(folha.mes_referencia);
+  const comp = competencia(folha.data_emissao ? folha.data_emissao.slice(0, 7) : folha.mes_referencia);
   const emissao = folha.data_emissao ? isoToBR(folha.data_emissao).replace(/-/g, "/") : "-";
   const venc = isoToBR(folha.vencimento).replace(/-/g, "/");
 
